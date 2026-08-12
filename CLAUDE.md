@@ -16,6 +16,33 @@ This file is orchestration/meta only. The sibling project's own `CLAUDE.md`
 source of truth — video tracker, current pipeline state, working
 conventions. Don't duplicate that table here; read it there.
 
+## Project & Persona (frozen, one-time — not a pipeline stage)
+
+Before any per-video work, the channel's identity was locked once and never
+re-decided per video:
+
+- **What the project is:** a video-sharing channel producing long-form
+  (~10-15 min) animated "ink"/stickman-style explainer videos — script →
+  voiceover → animation → final render, monetized via ad-network/YPP
+  revenue, replicating the real `@Inkexplainer96` channel's format.
+- **Who the host character is** — locked across two dimensions, mirrored
+  into this folder at `persona/tone.md` and `persona/character_design.md`
+  so you can work from here without opening the sibling repo:
+  - **Voice/tone** (`persona/tone.md`): a three-way blend — Fireship's
+    fast/sarcastic/self-aware energy as the default texture, OverSimplified's
+    accuracy-first backbone underneath the jokes, Sam O'Nella's flat-deadpan
+    delivery reserved specifically for genuinely dark or absurd facts.
+  - **Visual design** (`persona/character_design.md`): a simple stick
+    figure, natural messy brown hair (specific locked wording after 3 real
+    testing rounds — see the file for the full history of what went wrong
+    and why), flat pale skin, bold black outlines, no photorealism anywhere.
+- These two files are **mirrors** of the sibling repo's
+  `assets/brain/tone/persona.md` and `assets/brain/visuals/character_design.md`
+  — frozen/locked content, not living docs. If either original is ever
+  revised in the sibling repo, resync the copy here by hand.
+- `script-writer`, `title-writer`, and `shot-list-builder` all read these
+  local mirrors directly rather than reaching into the sibling repo for them.
+
 ## Pipeline stages and who handles them
 
 | Stage | Handled by | Type | Reads |

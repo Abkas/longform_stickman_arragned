@@ -30,14 +30,16 @@ its sibling at `../long-form-stickman-yt/`.
      genuinely needs a short dynamic clip, and when unsure, default to
      `image` and note it as a "candidate for video" in your final report
      rather than deciding unilaterally.
-2. **`../long-form-stickman-yt/assets/brain/visuals/character_design.md`
-   — use this file's "Locked character suffix" block for every
-   `character`-tagged shot.** This is the current, correct wording (final
-   pass, natural-hair fix). `flow_workflow.md`'s own "Primary method"
-   section still quotes an *older* character-suffix example from before
-   that fix — do not use that one, it's stale. This mismatch across the two
-   files is a real, easy-to-hit trap; double-check you pulled the suffix
-   from `character_design.md`, not `flow_workflow.md`.
+2. **`../../persona/character_design.md`** (local mirror of the sibling's
+   `assets/brain/visuals/character_design.md` — read the local copy) — use
+   this file's "Locked character suffix" block for every `character`-tagged
+   shot. This is the current, correct wording (final pass, natural-hair
+   fix). `flow_workflow.md` in the sibling repo used to also quote an
+   *older*, stale character-suffix example from before that fix — that was
+   removed 2026-08-12 and replaced with a pointer back to this file, so
+   there's now only one place this text can live. Still worth double-
+   checking you're reading the local `../../persona/character_design.md`
+   mirror and not an old cached version of your own.
 3. Use `flow_workflow.md`'s `diagram` and `environment` suffix blocks
    verbatim — those two weren't touched by the character-design revision.
 4. Skim an existing video's `shot_list.md` (e.g.

@@ -29,13 +29,11 @@ every run** — don't rely on memory from a past session.
    topic, implied payoff/reveal, groundable in real evidence, thumbnail
    reads as the genre at a glance, second-person/crisis framing not
    third-person lecture).
-3. `../long-form-stickman-yt/assets/brain/tone/persona.md` — read the
-   "Decision log" at the bottom. It explicitly flags that this channel's
-   sarcastic/genZ-humor tone hasn't been re-derived into its own title
-   strategy yet (the current formula is still purely Ink Explainer's
-   straight-question style). Surface a playful/sarcastic-toned variant as
-   an optional thing to test alongside the strict-formula drafts — don't
-   silently drop it just because it's not yet "proven."
+3. `../../../persona/tone.md` (local mirror of the sibling's
+   `assets/brain/tone/persona.md`) — read the "Decision log" at the bottom.
+   It explicitly flags that this channel's sarcastic/genZ-humor tone hasn't
+   been re-derived into its own title strategy yet (the current formula is
+   still purely Ink Explainer's straight-question style).
 
 ## What to do
 
@@ -46,10 +44,14 @@ every run** — don't rely on memory from a past session.
 3. For each, state explicitly which data points it satisfies (e.g. "names
    Ancient Humans directly, question-form, 8 words, sustained-threat
    framing") and flag anything it doesn't fully hit.
-4. If it feels natural, include one tone-forward variant per the
-   `tone/persona.md` note above, clearly labeled as experimental/untested
-   against real data.
-5. Let the user pick or request revisions.
+4. **Always** include at least one tone-forward/sarcastic variant alongside
+   the strict-formula ones — not just "when it feels natural." The user
+   wants a real spread of different title types to personally choose from
+   every time, not a single converged recommendation. Label the tone-forward
+   variant clearly as experimental/untested against real view data (per the
+   `tone/persona.md` note above), but always include it.
+5. Present the full spread and let the user pick — don't narrow it down for
+   them.
 
 ## What NOT to do
 
