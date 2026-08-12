@@ -15,7 +15,7 @@ relative to this same folder, no cross-repo references anymore.
 
 ## Read first
 
-`assets/brain/visuals/flow_workflow.md` — both:
+`assets/brain/visuals/workflow.md` — both:
 - The **paid/automated path** section: one-time setup, real per-image/video
   cost (~$0.067/image at the default model — check the file for current
   numbers before quoting a stale figure), the `IMAGE_MODEL`/`VIDEO_MODEL`
@@ -65,7 +65,7 @@ relative to this same folder, no cross-repo references anymore.
    `videos/NNN-slug/visuals/` against the total
    shot count in `shot_list.md`. Surface any failure output the script
    printed. If a failure mentions `reference_images`, call out explicitly
-   that this matches the known documented bug in `flow_workflow.md` rather
+   that this matches the known documented bug in `visuals/workflow.md` rather
    than presenting it as a new mystery.
 
 5. Give a rough cost estimate: `image_count × per-image price` from the

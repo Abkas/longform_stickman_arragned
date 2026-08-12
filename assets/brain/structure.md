@@ -12,7 +12,7 @@ Long-form animated "ink"/stickman-style explainer videos — immersive second-pe
 
 ## Length target (locked 2026-08-04, revised from full-catalog data)
 
-**11-13 min / ~2,450-2,800 words**, using the ~205-215 WPM pace target from `assets/brain/narration/voice.md`. This supersedes the original "~11-12 min" estimate, which was guessed from a single video before the full 12-video catalog was pulled. Ink Explainer's early videos ran 4-9 min, but their three most recent uploads — Rain (11:37), Winter (11:30), Guns (12:47) — average almost exactly 12 min, a deliberate recent trend, not noise. It also lines up with the channel's own YPP watch-hours goal: longer retained videos build watch hours faster per upload. Apply this to every video, not just one.
+**11-13 min / ~2,450-2,800 words**, using the ~205-215 WPM pace target from `assets/brain/voice.md`. This supersedes the original "~11-12 min" estimate, which was guessed from a single video before the full 12-video catalog was pulled. Ink Explainer's early videos ran 4-9 min, but their three most recent uploads — Rain (11:37), Winter (11:30), Guns (12:47) — average almost exactly 12 min, a deliberate recent trend, not noise. It also lines up with the channel's own YPP watch-hours goal: longer retained videos build watch hours faster per upload. Apply this to every video, not just one.
 
 ## Script structure formula (~11-12 min target, validated against the Ink Explainer worked example below)
 

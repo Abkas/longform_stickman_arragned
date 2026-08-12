@@ -13,7 +13,7 @@ they're living references that can be revised.
 
 ## Read first, in this order
 
-1. `assets/brain/format/structure.md` — read
+1. `assets/brain/structure.md` — read
    "Channel aim" and "Workflow for a new video" step 1. The core move: some
    *forced constraint* (weather, isolation, scarcity, disaster) ancient/
    historical people had to survive or adapt to.
@@ -28,7 +28,7 @@ they're living references that can be revised.
 4. `CLAUDE.md` — read the "Video tracker" table so
    a new pitch doesn't collide with something already published or in
    progress.
-5. `assets/brain/title/strategy.md` — skim the
+5. `assets/brain/title.md` — skim the
    "non-negotiable" line at the bottom: title/topic must read as a
    sustained-or-existential threat, not a mundane occurrence. Topic and
    title are coupled — a topic that can't clear this bar isn't worth
@@ -66,7 +66,7 @@ they're living references that can be revised.
 ## What NOT to do
 
 - Do not edit `CLAUDE.md`'s video tracker table or
-  `assets/brain/title/strategy.md`'s track record table — those stay
+  `assets/brain/title.md`'s track record table — those stay
   user-maintained. Just tell the user what got locked so they can update
   them.
 - Do not edit any file under `assets/brain/` — those are frozen references,

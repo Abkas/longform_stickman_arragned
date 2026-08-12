@@ -15,7 +15,7 @@ relative to this same folder, no cross-repo references anymore.
 
 ## Read first, in full
 
-1. `assets/brain/visuals/flow_workflow.md` —
+1. `assets/brain/visuals/workflow.md` —
    specifically:
    - "Shot density": one shot per sentence, split the script into real
      sentences programmatically, merge any sentence under 8 words forward
@@ -30,14 +30,14 @@ relative to this same folder, no cross-repo references anymore.
      genuinely needs a short dynamic clip, and when unsure, default to
      `image` and note it as a "candidate for video" in your final report
      rather than deciding unilaterally.
-2. **`assets/brain/visuals/character_design.md`** — use this file's
+2. **`assets/brain/visuals/character.md`** — use this file's
    "Locked character suffix" block for every `character`-tagged shot. This
    is the current, correct wording (final pass, natural-hair fix).
-   `flow_workflow.md` used to also quote an *older*, stale character-suffix
+   `visuals/workflow.md` used to also quote an *older*, stale character-suffix
    example from before that fix — that was removed 2026-08-12 and replaced
    with a pointer back to this file, so there's now only one place this
    text can live.
-3. Use `flow_workflow.md`'s `diagram` and `environment` suffix blocks
+3. Use `visuals/workflow.md`'s `diagram` and `environment` suffix blocks
    verbatim — those two weren't touched by the character-design revision.
 4. Skim an existing video's `shot_list.md` (e.g.
    `videos/001-toba-supervolcano/shot_list.md`) as
@@ -61,7 +61,7 @@ relative to this same folder, no cross-repo references anymore.
    traps like this.
 5. Compute `- Duration:` per shot from its word count against the target
    WPM (check `script.md`'s own header for a stated pace; default to
-   ~207 WPM per `narration/voice.md` if not stated). Total duration should
+   ~207 WPM per `assets/brain/voice.md` if not stated). Total duration should
    land close to the script's intended runtime.
 6. Write `videos/NNN-slug/shot_list.md`.
 7. Programmatically (not by hand) extract:

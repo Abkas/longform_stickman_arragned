@@ -13,20 +13,20 @@ conversational and iterative with the user here; don't rush to "lock."
 
 ## Read first, in full
 
-1. `assets/brain/format/structure.md` — the 5-part
+1. `assets/brain/structure.md` — the 5-part
    script structure formula (hook → first pillar → escalating middle
    pillars → cultural payoff → reframe/twist), the length target (~11-13
    min / ~2,450-2,800 words at 205-215 WPM), and the full worked-example
    teardown it was distilled from. Follow the formula's shape, not just its
    letter — read the worked example closely enough to understand *why*
    each section does what it does.
-2. `assets/brain/tone/persona.md` — the locked three-way blend:
+2. `assets/brain/persona.md` — the locked three-way blend:
    Fireship's fast/sarcastic/self-aware energy as the *default texture*
    (not reserved for special moments), OverSimplified's accuracy-first
    backbone underneath the jokes, Sam O'Nella's flat/deadpan technique
    specifically on genuinely dark or absurd facts. Read the "Decision log"
    section for the exact wording of what changed and why.
-3. `assets/brain/narration/voice.md` — the
+3. `assets/brain/voice.md` — the
    200-215 WPM pace target, achieved through short sentences and frequent
    signposting (not just a playback-speed setting), and the Eleven v3
    audio-tag convention (`[pause]`, `[deadpan]`, `[wry]`, etc.) — used
