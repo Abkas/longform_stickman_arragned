@@ -80,9 +80,11 @@ reporting back a short result instead of filling the conversation.
 - `assets/brain/` — frozen format/tone/narration/visual reference (see
   above).
 - `assets/references/` — competitive research.
-- `assets/character/` — reserved for an optional built-once character
-  reference image (`host_reference.png`), currently empty; see
-  `flow_workflow.md`'s "Optional: reference-image" section.
+- (No `assets/character/` folder currently — it was an empty placeholder
+  in the old project and got removed 2026-08-12. `flow_workflow.md`'s
+  "Optional: reference-image" section describes an optional built-once
+  character reference image; if that path is ever used, create
+  `assets/character/host_reference.png` then.)
 - `pipeline/` — `generate_visuals.py` (per-video shot generation via Gemini
   API), `generate_character_reference.py` (one-time character reference
   generation), `requirements.txt`. **`pipeline/.venv/` is not committed and
