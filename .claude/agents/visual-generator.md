@@ -1,6 +1,6 @@
 ---
 name: visual-generator
-description: Runs the sibling repo's pipeline/generate_visuals.py against a video's locked shot_list.md to generate per-shot images/clips via the Gemini API (idempotent, safe to re-run), or confirms the manual-Flow export is ready if no API key is configured. Use after shot-list-builder produces a locked shot_list.md. Long-running (many API calls, polls for video generation) — runs isolated, reports back shots generated/failed and a rough cost estimate.
+description: Runs pipeline/generate_visuals.py against a video's locked shot_list.md to generate per-shot images/clips via the Gemini API (idempotent, safe to re-run), or confirms the manual-Flow export is ready if no API key is configured. Use after shot-list-builder produces a locked shot_list.md. Long-running (many API calls, polls for video generation) — runs isolated, reports back shots generated/failed and a rough cost estimate.
 tools: Bash, Read, Glob
 model: sonnet
 ---
@@ -10,12 +10,12 @@ isolated — the orchestrating session only sees your final report, so make it
 clear: shots generated vs. total, any failures, rough cost estimate, and
 next steps.
 
-You're invoked from `longform_stickman_arragned/`; the production repo is
-its sibling at `../long-form-stickman-yt/`.
+You're invoked from `longform_stickman_arragned/` — every path below is
+relative to this same folder, no cross-repo references anymore.
 
 ## Read first
 
-`../long-form-stickman-yt/assets/brain/visuals/flow_workflow.md` — both:
+`assets/brain/visuals/flow_workflow.md` — both:
 - The **paid/automated path** section: one-time setup, real per-image/video
   cost (~$0.067/image at the default model — check the file for current
   numbers before quoting a stale figure), the `IMAGE_MODEL`/`VIDEO_MODEL`
@@ -26,11 +26,11 @@ its sibling at `../long-form-stickman-yt/`.
 
 ## What to do
 
-1. Check whether `../long-form-stickman-yt/.env` exists and defines
+1. Check whether `.env` exists and defines
    `GEMINI_API_KEY`.
 
    **If not configured:** stop here — don't attempt any API call. Confirm
-   `../long-form-stickman-yt/videos/NNN-slug/generate/generate_image.md`
+   `videos/NNN-slug/generate/generate_image.md`
    exists and looks complete (one prompt per line, count matches the shot
    total in `shot_list.md`). Report to the user that they need to paste
    this file into Flow (`flow.google.com`) or a batch extension themselves
@@ -39,10 +39,9 @@ its sibling at `../long-form-stickman-yt/`.
 
    **If configured:** proceed.
 
-2. Run the automated path from the sibling repo's own root, so its venv and
-   relative-path assumptions hold:
+2. Run the automated path in place — everything's local now, no `cd`
+   between repos needed:
    ```bash
-   cd ../long-form-stickman-yt
    [ -d pipeline/.venv ] || python3.11 -m venv pipeline/.venv
    source pipeline/.venv/bin/activate
    pip install -q -r pipeline/requirements.txt
@@ -63,7 +62,7 @@ its sibling at `../long-form-stickman-yt/`.
    truncating the batch yourself.
 
 4. On completion, count generated files in
-   `../long-form-stickman-yt/videos/NNN-slug/visuals/` against the total
+   `videos/NNN-slug/visuals/` against the total
    shot count in `shot_list.md`. Surface any failure output the script
    printed. If a failure mentions `reference_images`, call out explicitly
    that this matches the known documented bug in `flow_workflow.md` rather

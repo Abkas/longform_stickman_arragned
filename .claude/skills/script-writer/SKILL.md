@@ -13,28 +13,26 @@ conversational and iterative with the user here; don't rush to "lock."
 
 ## Read first, in full
 
-1. `../long-form-stickman-yt/assets/brain/format/structure.md` — the 5-part
+1. `assets/brain/format/structure.md` — the 5-part
    script structure formula (hook → first pillar → escalating middle
    pillars → cultural payoff → reframe/twist), the length target (~11-13
    min / ~2,450-2,800 words at 205-215 WPM), and the full worked-example
    teardown it was distilled from. Follow the formula's shape, not just its
    letter — read the worked example closely enough to understand *why*
    each section does what it does.
-2. `../../../persona/tone.md` (local mirror of the sibling's
-   `assets/brain/tone/persona.md` — read the local copy so this pipeline
-   can run without opening the sibling repo) — the locked three-way blend:
+2. `assets/brain/tone/persona.md` — the locked three-way blend:
    Fireship's fast/sarcastic/self-aware energy as the *default texture*
    (not reserved for special moments), OverSimplified's accuracy-first
    backbone underneath the jokes, Sam O'Nella's flat/deadpan technique
    specifically on genuinely dark or absurd facts. Read the "Decision log"
    section for the exact wording of what changed and why.
-3. `../long-form-stickman-yt/assets/brain/narration/voice.md` — the
+3. `assets/brain/narration/voice.md` — the
    200-215 WPM pace target, achieved through short sentences and frequent
    signposting (not just a playback-speed setting), and the Eleven v3
    audio-tag convention (`[pause]`, `[deadpan]`, `[wry]`, etc.) — used
    sparingly, only at structural beats (cold open, signposts, closing
    callback), not on every line.
-4. The target video's `../long-form-stickman-yt/videos/NNN-slug/notes.md` —
+4. The target video's `videos/NNN-slug/notes.md` —
    the sourcing `topic-scout` gathered. Every major claim in the script
    needs a citable site/study/date backing it, per `structure.md`'s
    title/hook checklist item 3.
@@ -56,7 +54,7 @@ conversational and iterative with the user here; don't rush to "lock."
 5. Iterate with the user conversationally — this is exactly why this stage
    is a skill and not an isolated agent. Keep revising until they say it's
    locked.
-6. On lock, write `../long-form-stickman-yt/videos/NNN-slug/script.md`.
+6. On lock, write `videos/NNN-slug/script.md`.
    Check an existing video's `script.md` for the exact header convention
    (status/lock date, word count, title, target runtime/pace/tone
    one-liner, pointer to `notes.md` for sources) and match it.

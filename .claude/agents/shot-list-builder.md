@@ -10,12 +10,12 @@ run isolated from the main conversation — the person orchestrating this only
 sees your final report, so make it count: shot count, duration-vs-script
 match, word-for-word verification, and any warnings, clearly stated.
 
-You're invoked from `longform_stickman_arragned/`; the production repo is
-its sibling at `../long-form-stickman-yt/`.
+You're invoked from `longform_stickman_arragned/` — every path below is
+relative to this same folder, no cross-repo references anymore.
 
 ## Read first, in full
 
-1. `../long-form-stickman-yt/assets/brain/visuals/flow_workflow.md` —
+1. `assets/brain/visuals/flow_workflow.md` —
    specifically:
    - "Shot density": one shot per sentence, split the script into real
      sentences programmatically, merge any sentence under 8 words forward
@@ -30,25 +30,22 @@ its sibling at `../long-form-stickman-yt/`.
      genuinely needs a short dynamic clip, and when unsure, default to
      `image` and note it as a "candidate for video" in your final report
      rather than deciding unilaterally.
-2. **`../../persona/character_design.md`** (local mirror of the sibling's
-   `assets/brain/visuals/character_design.md` — read the local copy) — use
-   this file's "Locked character suffix" block for every `character`-tagged
-   shot. This is the current, correct wording (final pass, natural-hair
-   fix). `flow_workflow.md` in the sibling repo used to also quote an
-   *older*, stale character-suffix example from before that fix — that was
-   removed 2026-08-12 and replaced with a pointer back to this file, so
-   there's now only one place this text can live. Still worth double-
-   checking you're reading the local `../../persona/character_design.md`
-   mirror and not an old cached version of your own.
+2. **`assets/brain/visuals/character_design.md`** — use this file's
+   "Locked character suffix" block for every `character`-tagged shot. This
+   is the current, correct wording (final pass, natural-hair fix).
+   `flow_workflow.md` used to also quote an *older*, stale character-suffix
+   example from before that fix — that was removed 2026-08-12 and replaced
+   with a pointer back to this file, so there's now only one place this
+   text can live.
 3. Use `flow_workflow.md`'s `diagram` and `environment` suffix blocks
    verbatim — those two weren't touched by the character-design revision.
 4. Skim an existing video's `shot_list.md` (e.g.
-   `../long-form-stickman-yt/videos/001-toba-supervolcano/shot_list.md`) as
+   `videos/001-toba-supervolcano/shot_list.md`) as
    a concrete reference for what a correct, real shot list looks like.
 
 ## What to do
 
-1. Read the target video's locked `../long-form-stickman-yt/videos/NNN-slug/script.md`.
+1. Read the target video's locked `videos/NNN-slug/script.md`.
 2. Split it into real sentences programmatically (write and run a small
    script via Bash — don't do this by hand). Merge any sub-8-word sentence
    forward into the next one.
@@ -66,11 +63,11 @@ its sibling at `../long-form-stickman-yt/`.
    WPM (check `script.md`'s own header for a stated pace; default to
    ~207 WPM per `narration/voice.md` if not stated). Total duration should
    land close to the script's intended runtime.
-6. Write `../long-form-stickman-yt/videos/NNN-slug/shot_list.md`.
+6. Write `videos/NNN-slug/shot_list.md`.
 7. Programmatically (not by hand) extract:
-   - `../long-form-stickman-yt/videos/NNN-slug/generate/generate_image.md`
+   - `videos/NNN-slug/generate/generate_image.md`
      — every shot's full `- Prompt:` line, one per line, nothing else.
-   - `../long-form-stickman-yt/videos/NNN-slug/generate/generate_voice.md`
+   - `videos/NNN-slug/generate/generate_voice.md`
      — the script's clean narration text, `*[tag]*` converted to `[tag]`,
      paragraph breaks kept, no other markdown.
 

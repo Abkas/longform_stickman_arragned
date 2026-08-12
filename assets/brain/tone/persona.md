@@ -1,9 +1,3 @@
-> **Mirrored copy.** Source of truth is
-> `../long-form-stickman-yt/assets/brain/tone/persona.md`. This is frozen/
-> locked content — if the original is ever revised, resync this copy by
-> hand (don't let the two drift apart). Mirrored here 2026-08-12 so this
-> folder can be worked from without opening the sibling repo.
-
 # Tone/persona options — researched 2026-08-04
 
 This started as a decision doc, not a locked reference — everything else in `assets/brain/` (script structure, narration pacing target, ElevenLabs technique) was built around Ink Explainer's dramatic-but-earnest tone. The options below range from "same tone, faster" to "same visual style, fully comedic," and picking one changes the script formula, not just the voice performance. Status: **Locked 2026-08-04 — see "Decision log" below for the chosen blend.** (This status line previously said "not decided yet" even after the Decision log below documented a firm choice on the same date — fixed 2026-08-12 to stop the file contradicting itself.)

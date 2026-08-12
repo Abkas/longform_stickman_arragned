@@ -1,12 +1,3 @@
-> **Mirrored copy.** Source of truth is
-> `../long-form-stickman-yt/assets/brain/visuals/character_design.md`. This
-> is frozen/locked content — if the original is ever revised, resync this
-> copy by hand (don't let the two drift apart). Mirrored here 2026-08-12 so
-> this folder can be worked from without opening the sibling repo. This is
-> also now the **only** place `flow_workflow.md` in the sibling repo points
-> to for the character suffix — it used to also quote a stale copy inline,
-> fixed 2026-08-12.
-
 # Character design — locked, revised 2026-08-09 (third pass, natural hair)
 
 Channel-wide reference, not video-specific — applies to every future video's host character, same as the other `assets/brain/` docs.

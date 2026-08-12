@@ -1,47 +1,50 @@
-# CLAUDE.md — longform_stickman_arragned (orchestrator)
+# CLAUDE.md — longform_stickman_arragned
 
-This folder is the **orchestrator workspace** for the `long-form-stickman-yt`
-production pipeline. It holds nothing production-related itself — no videos,
-no brain files, no pipeline code. Its only job is to be where you run Claude
-Code from so it can dispatch pipeline stages to specialist skills/agents.
+Orientation doc for future Claude Code sessions working on this channel.
+This folder is the **complete, standalone home** for the project — brain
+files, pipeline code, video content, and the orchestrator (skills/agents)
+config all live here together. It replaces an earlier two-folder split
+(`longform_stickman_arragned/` as thin config + a sibling
+`long-form-stickman-yt/` for content) — that split felt cramped/fragmented
+in practice, so everything was migrated into one folder on 2026-08-12. The
+old folder still exists on disk as an untouched, unused safety-net copy but
+should be treated as retired — work happens here now.
 
-**The real project lives in the sibling folder:** `../long-form-stickman-yt/`.
-Every specialist here reads and writes into it via `../long-form-stickman-yt/...`
-relative paths — which only resolve correctly if Claude Code's working
-directory is *this* folder. Always launch sessions for this pipeline from
-here, not from inside the sibling repo.
+## What this channel is
 
-This file is orchestration/meta only. The sibling project's own `CLAUDE.md`
-(`../long-form-stickman-yt/CLAUDE.md`) remains the real production-status
-source of truth — video tracker, current pipeline state, working
-conventions. Don't duplicate that table here; read it there.
+A video-sharing channel producing long-form (~10-15 min) animated
+"ink"/stickman-style explainer videos — script → voiceover → animation →
+final render — replicating the real `@Inkexplainer96` channel's format,
+monetized via ad-network/YPP revenue.
 
-## Project & Persona (frozen, one-time — not a pipeline stage)
+## Project & Persona (frozen, one-time — locked, not re-decided per video)
 
-Before any per-video work, the channel's identity was locked once and never
-re-decided per video:
+- **Voice/tone** — `assets/brain/tone/persona.md`: a three-way blend —
+  Fireship's fast/sarcastic/self-aware energy as the default texture,
+  OverSimplified's accuracy-first backbone underneath the jokes, Sam
+  O'Nella's flat-deadpan delivery reserved specifically for genuinely dark
+  or absurd facts. Locked 2026-08-04.
+- **Visual design** — `assets/brain/visuals/character_design.md`: a simple
+  stick figure, natural messy brown hair (specific locked wording after 3
+  real testing rounds — see the file for the full history of what went
+  wrong and why), flat pale skin, bold black outlines, no photorealism
+  anywhere. Locked 2026-08-09 (third pass).
 
-- **What the project is:** a video-sharing channel producing long-form
-  (~10-15 min) animated "ink"/stickman-style explainer videos — script →
-  voiceover → animation → final render, monetized via ad-network/YPP
-  revenue, replicating the real `@Inkexplainer96` channel's format.
-- **Who the host character is** — locked across two dimensions, mirrored
-  into this folder at `persona/tone.md` and `persona/character_design.md`
-  so you can work from here without opening the sibling repo:
-  - **Voice/tone** (`persona/tone.md`): a three-way blend — Fireship's
-    fast/sarcastic/self-aware energy as the default texture, OverSimplified's
-    accuracy-first backbone underneath the jokes, Sam O'Nella's flat-deadpan
-    delivery reserved specifically for genuinely dark or absurd facts.
-  - **Visual design** (`persona/character_design.md`): a simple stick
-    figure, natural messy brown hair (specific locked wording after 3 real
-    testing rounds — see the file for the full history of what went wrong
-    and why), flat pale skin, bold black outlines, no photorealism anywhere.
-- These two files are **mirrors** of the sibling repo's
-  `assets/brain/tone/persona.md` and `assets/brain/visuals/character_design.md`
-  — frozen/locked content, not living docs. If either original is ever
-  revised in the sibling repo, resync the copy here by hand.
-- `script-writer`, `title-writer`, and `shot-list-builder` all read these
-  local mirrors directly rather than reaching into the sibling repo for them.
+These two files are genuinely frozen — `script-writer`, `title-writer`, and
+`shot-list-builder` all read them, none of them edit them.
+
+## Format reference
+
+- Script structure + title/hook checklist + worked-example teardown:
+  `assets/brain/format/structure.md`.
+- Title formula, data-derived from a full competitor catalog:
+  `assets/brain/title/strategy.md`.
+- Narration pacing + ElevenLabs technique: `assets/brain/narration/voice.md`.
+- Visual generation workflow (shot density, self-contained prompts, style
+  suffixes): `assets/brain/visuals/flow_workflow.md`.
+- Competitive research: `assets/references/channel_reports/` (deep-dive on
+  the primary benchmark channel + a wider niche-landscape survey),
+  `assets/references/transcripts/`, `assets/references/images/`.
 
 ## Pipeline stages and who handles them
 
@@ -55,48 +58,63 @@ re-decided per video:
 | 6. Voiceover (ElevenLabs) | manual — no specialist | — | `narration/voice.md` for settings/prompt |
 | 7. Assembly (CapCut) | manual — no specialist | — | `format/structure.md`'s visual-style notes |
 
-All brain-file paths above are relative to `../long-form-stickman-yt/assets/brain/`.
+All brain-file paths above are relative to `assets/brain/` **in this same
+folder** — no more cross-repo `../` paths anywhere in the specialist files.
 
-**Skills** (`topic-scout`, `title-writer`, `script-writer`) run in this same
-conversation — you stay talking to one continuous session as it works
-through each stage, so you can correct/redirect it conversationally at any
-point. **Agents** (`shot-list-builder`, `visual-generator`) run isolated —
-dispatched separately, they do bulky/mechanical/long-running work off to the
-side and report back a short result rather than filling this conversation
-with their intermediate output.
+**Skills** (`topic-scout`, `title-writer`, `script-writer`) run in one
+continuous conversation — stay talking to the same session as it works
+through each stage. **Agents** (`shot-list-builder`, `visual-generator`) run
+isolated — dispatched separately for bulky/mechanical/long-running work,
+reporting back a short result instead of filling the conversation.
 
-## Trust boundaries — what specialists will and won't touch
+## Folder structure
 
-- **Frozen reference files** (`assets/brain/format/structure.md`,
-  `tone/persona.md`, `visuals/character_design.md`, etc.) — read-only to
-  every specialist here. None of them edit these; they're the channel's
-  locked rules, changed deliberately by a human, not by pipeline automation.
-- **Living tracking docs** (`../long-form-stickman-yt/CLAUDE.md`'s video
-  tracker table, `assets/brain/title/strategy.md`'s track record table) —
-  specialists report locked decisions back to you in conversation, but
-  **do not** write to these docs themselves. You update them. (This was a
-  deliberate choice — keeps the channel's status docs under your direct
-  control rather than auto-edited by an agent.)
-- **`videos/NNN-slug/` content** (`notes.md`, `script.md`, `shot_list.md`,
-  `generate/*.md`) — this is where specialists actively read and write, per
-  the stage table above.
+- `videos/NNN-<slug>/` — one folder per video: `notes.md` (sourcing),
+  `title.md`, `script.md` (locked narration), `shot_list.md` (machine-
+  parseable scene breakdown), `generate/generate_image.md` +
+  `generate/generate_voice.md` (build artifacts, regenerated whenever
+  script/shot-list changes), `audio/` (ElevenLabs output), `generate/generated/`
+  (raw AI image/clip output), `testing/` (style-suffix iteration rounds),
+  `output/` (final render + thumbnail), `description.md` + `thumbnail_prompt.md`
+  (upload-ready metadata).
+- `assets/brain/` — frozen format/tone/narration/visual reference (see
+  above).
+- `assets/references/` — competitive research.
+- `assets/character/` — reserved for an optional built-once character
+  reference image (`host_reference.png`), currently empty; see
+  `flow_workflow.md`'s "Optional: reference-image" section.
+- `pipeline/` — `generate_visuals.py` (per-video shot generation via Gemini
+  API), `generate_character_reference.py` (one-time character reference
+  generation), `requirements.txt`. **`pipeline/.venv/` is not committed and
+  not migrated from the old folder** — recreate it fresh:
+  `python3.11 -m venv pipeline/.venv && source pipeline/.venv/bin/activate
+  && pip install -r pipeline/requirements.txt`. Needs `GEMINI_API_KEY` in
+  `.env` (gitignored; copied over from the old folder, still valid).
+- `.claude/skills/`, `.claude/agents/` — the specialist files themselves.
 
-## Working a video end to end
+## Video tracker
 
-1. Start a session here, ask for a new topic — this invokes `topic-scout`.
-2. Once a topic locks, `title-writer` drafts titles.
-3. Once topic + title are settled, `script-writer` drafts `script.md`,
-   iterating with you until locked.
-4. Dispatch `shot-list-builder` (an isolated agent call) once `script.md`
-   is locked — it builds `shot_list.md` + the `generate/` export files.
-5. Dispatch `visual-generator` once `shot_list.md` is locked — it either
-   runs the paid Gemini pipeline or tells you the manual-Flow export is
-   ready.
-6. Voiceover (ElevenLabs) and assembly (CapCut) stay fully manual — no
-   specialist here automates either; see the sibling project's `CLAUDE.md`
-   and `assets/brain/narration/voice.md` for the actual settings/technique.
+| # | Slug | Status | Notes |
+|---|------|--------|-------|
+| 001 | toba-supervolcano | **Effectively upload-ready** | "How Did Ancient Humans Survive Earth's Worst Volcano?" — myth-busting angle. `script.md` locked (2,451 words, ~11.9-12 min). `shot_list.md`: 98 shots, verified word-for-word against the script. Style suffixes tuned across 8 test rounds (`testing/version_1`-`8`, see `testing/log.md`) — final locked wording in `assets/brain/visuals/character_design.md`. All 98 shots generated (`generate/generated/`), ElevenLabs VO generated (`audio/`), and a **finished render already exists**: `output/001-toba-supervolcano_v2.mp4` + `output/thumbnail.jpg`. `description.md` has a locked title, full sourced description, chapter timestamps, and tags — upload-ready. (This row was stale as of the migration — it previously said "next: run the batch, generate VO, assemble," despite all of that already being done. Fixed 2026-08-12.) `videos/001-toba-supervolcano.zip` also exists alongside the folder — looks like a possibly-stale backup archive, worth checking before relying on it. |
+
+## Known gaps
+
+- No `002-<slug>` video started yet.
+- `assets/character/` has no reference image built yet (optional, per
+  `flow_workflow.md`).
+- The `videos/001-toba-supervolcano.zip` archive's relationship to the real
+  `videos/001-toba-supervolcano/` folder hasn't been confirmed (stale
+  duplicate vs. intentional backup) — flagged during the 2026-08-12
+  migration, not yet resolved.
+
+## Working notes
+
+- This file does not auto-update — update it directly as pipeline decisions
+  get made or videos progress.
+- Next concrete step: pick a video 002 topic (`topic-scout`), avoiding the
+  "rain" angle — already crowded, see `assets/references/channel_reports/2026-08-04_niche_landscape.md`.
 
 ---
 
-_This file does not auto-update — update it directly if the specialist
-roster or pipeline mapping changes. Last updated: 2026-08-12._
+_Migrated from the old two-folder split 2026-08-12. Last updated: 2026-08-12._
