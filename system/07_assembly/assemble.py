@@ -6,7 +6,8 @@ Stage 07 — assembly. Turns a video's locked shot_list.md + generated stills
 Usage:
     python system/07_assembly/assemble.py videos/NNN-slug \
         [--images-dir PATH] [--audio PATH] \
-        [--override FROM_SHOT:PATH ...]
+        [--override FROM_SHOT:PATH ...] \
+        [--sfx | --no-sfx] [--music | --no-music]
 
 Defaults (matching the documented per-video folder convention, see
 system/07_assembly/assembly.md):
@@ -27,17 +28,31 @@ this is an approximation, not a word-perfect sync, and what would fix that
 properly (real ElevenLabs word timestamps, not implemented yet).
 
 Every still gets a slow Ken Burns pan/zoom (alternating zoom-in/zoom-out,
-cycling pan direction) per system/04_shots/workflow.md's locked
-assembly-stage guidance, instead of a hard static hold.
+cycling pan direction, with per-shot randomized intensity so it doesn't
+read as one fixed mechanical formula -- see assembly.md's "Research: making
+the edit feel human-made" section) instead of a hard static hold.
+
+--sfx (default on) synthesizes a short, soft tick sound at every shot
+transition -- no external sound library needed, generated in pure Python.
+--music (default on) synthesizes a very quiet two-tone ambient pad under
+the whole narration, heavily ducked -- a placeholder bed, not composed
+music, so cuts have *something* to sit against instead of dead silence.
+Both are cheap experiments per assembly.md's research notes, not a
+finished sound-design pipeline -- turn either off if it doesn't help.
 """
 import argparse
+import array
+import math
+import random
 import re
 import subprocess
+import wave
 from pathlib import Path
 
 W, H, FPS = 1920, 1080, 30
-ZMAX = 1.12  # 12% max zoom, standard Ken Burns range
-PAN_FRACTION = 0.035  # modest pan, stays inside the zoom margin at ZMAX
+ZMAX_BASE = 1.12  # ~12% max zoom, standard Ken Burns range, before per-shot jitter
+PAN_FRACTION_BASE = 0.035
+SAMPLE_RATE = 44100
 
 
 def ffprobe_duration(path: Path) -> float:
@@ -93,21 +108,36 @@ def find_audio(video_dir: Path, explicit: Path | None) -> Path:
     )
 
 
-def build_zoompan_filter(shot_index: int, duration: float) -> str:
+def build_zoompan_filter(shot_index: int, shot_num: int, duration: float) -> str:
+    # Per-shot deterministic jitter (seeded on shot number, not time) so
+    # re-running assemble.py on an unchanged shot list reproduces the same
+    # clip byte-for-byte, matching the existing "skip if clip exists" logic.
+    rng = random.Random(shot_num)
+    zmax = ZMAX_BASE + rng.uniform(-0.02, 0.03)
+    pan_fraction = PAN_FRACTION_BASE + rng.uniform(-0.01, 0.015)
+
+    # Very short shots (the itemized-list "flash" tier from shot.md's v2
+    # density rules, ~1.5-2.5s) get a gentler zoom -- the same intensity
+    # crammed into 2s instead of 8s would read as a jarring snap, not a pan.
+    if duration < 3.0:
+        intensity = max(0.4, duration / 3.0)
+        zmax = 1.0 + (zmax - 1.0) * intensity
+        pan_fraction *= intensity
+
     d_frames = max(1, round(duration * FPS))
     zoom_in = (shot_index % 2 == 0)
     pan_mode = shot_index % 4  # 0/3=center, 1=pan right, 2=pan left
 
-    inc = (ZMAX - 1) / d_frames
-    z_expr = (f"min(zoom+{inc:.8f},{ZMAX})" if zoom_in
-              else f"if(eq(on,0),{ZMAX},max(zoom-{inc:.8f},1.0))")
+    inc = (zmax - 1) / d_frames
+    z_expr = (f"min(zoom+{inc:.8f},{zmax:.6f})" if zoom_in
+              else f"if(eq(on,0),{zmax:.6f},max(zoom-{inc:.8f},1.0))")
 
     base_x = "iw/2-(iw/zoom/2)"
     base_y = "ih/2-(ih/zoom/2)"
     if pan_mode == 1:
-        x_expr = f"({base_x})+(iw*{PAN_FRACTION})*(on/{d_frames})"
+        x_expr = f"({base_x})+(iw*{pan_fraction:.6f})*(on/{d_frames})"
     elif pan_mode == 2:
-        x_expr = f"({base_x})-(iw*{PAN_FRACTION})*(on/{d_frames})"
+        x_expr = f"({base_x})-(iw*{pan_fraction:.6f})*(on/{d_frames})"
     else:
         x_expr = base_x
 
@@ -118,10 +148,10 @@ def build_zoompan_filter(shot_index: int, duration: float) -> str:
     )
 
 
-def render_clip(shot_index: int, image_path: Path, duration: float, out_path: Path):
+def render_clip(shot_index: int, shot_num: int, image_path: Path, duration: float, out_path: Path):
     if out_path.exists():
         return
-    vf = build_zoompan_filter(shot_index, duration)
+    vf = build_zoompan_filter(shot_index, shot_num, duration)
     cmd = [
         "ffmpeg", "-y", "-loop", "1", "-i", str(image_path),
         "-t", f"{duration:.3f}",
@@ -135,13 +165,54 @@ def render_clip(shot_index: int, image_path: Path, duration: float, out_path: Pa
         raise SystemExit(f"ffmpeg failed on shot {shot_index}:\n{r.stderr[-3000:]}")
 
 
-def main():
+def synth_tick_samples() -> array.array:
+    """A short (~70ms), soft descending tick -- pure Python, no assets, no
+    new dependencies. Sine tone with a fast exponential decay envelope."""
+    dur = 0.07
+    freq0, freq1 = 1400.0, 700.0  # slight downward pitch sweep, softer than a flat beep
+    n = int(SAMPLE_RATE * dur)
+    samples = array.array("h", [0] * n)
+    peak = 6000  # well under int16 max (32767) -- this gets volume-scaled again at mix time
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        frac = i / n
+        freq = freq0 + (freq1 - freq0) * frac
+        envelope = math.exp(-frac * 7.0)  # fast decay -- reads as a soft "tick", not a beep
+        samples[i] = int(peak * envelope * math.sin(2 * math.pi * freq * t))
+    return samples
+
+
+def build_tick_track(cut_times: list[float], total_duration: float, out_path: Path):
+    """Writes a mono WAV, silent except for a short tick at each cut time."""
+    tick = synth_tick_samples()
+    total_samples = int(total_duration * SAMPLE_RATE)
+    track = array.array("h", [0] * total_samples)
+    for t in cut_times:
+        start = int(t * SAMPLE_RATE)
+        end = min(start + len(tick), total_samples)
+        for i in range(end - start):
+            # add (not overwrite) in case cuts ever land closer together than
+            # the tick's own length -- clamped to int16 range either way
+            v = track[start + i] + tick[i]
+            track[start + i] = max(-32768, min(32767, v))
+    with wave.open(str(out_path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SAMPLE_RATE)
+        w.writeframes(track.tobytes())
+
+
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("video_dir", type=Path)
     ap.add_argument("--images-dir", type=Path, default=None)
     ap.add_argument("--audio", type=Path, default=None)
     ap.add_argument("--override", action="append", default=[],
                      help="FROM_SHOT:PATH -- use PATH as the image source from shot FROM_SHOT onward")
+    ap.add_argument("--no-sfx", dest="sfx", action="store_false", default=True,
+                     help="Disable the synthesized tick at each shot transition (default: on)")
+    ap.add_argument("--no-music", dest="music", action="store_false", default=True,
+                     help="Disable the synthesized ambient pad under the narration (default: on)")
     args = ap.parse_args()
 
     video_dir = args.video_dir
@@ -162,6 +233,7 @@ def main():
     slug = video_dir.name
     silent_concat = output_dir / "_silent_concat.mp4"
     concat_list = clips_dir / "_concat_list.txt"
+    tick_track_path = clips_dir / "_tick_track.wav"
     final_out = output_dir / f"{slug}_v1.mp4"
 
     shots = parse_shots(shot_list_path)
@@ -171,14 +243,17 @@ def main():
     print(f"Audio: {audio_path} ({audio_duration:.2f}s) | documented shot-duration sum: "
           f"{doc_total:.2f}s | scale factor: {scale:.4f}")
 
+    cumulative = 0.0
     for s in shots:
         s["real_duration"] = s["doc_duration"] * scale
+        s["cut_time"] = cumulative
+        cumulative += s["real_duration"]
         s["image"] = find_image(s["num"], images_dir, overrides)
 
     print("\nRendering per-shot Ken Burns clips...")
     for i, s in enumerate(shots):
         out_path = clips_dir / f"{s['num']:03d}.mp4"
-        render_clip(i, s["image"], s["real_duration"], out_path)
+        render_clip(i, s["num"], s["image"], s["real_duration"], out_path)
         s["clip"] = out_path
         print(f"  shot {s['num']:3d}  src={s['image'].parent.name:22s}  dur={s['real_duration']:5.2f}s")
 
@@ -189,16 +264,57 @@ def main():
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
                      "-c", "copy", str(silent_concat)], check=True)
 
+    audio_inputs = ["-i", str(audio_path)]
+    filter_parts = ["[1:a]volume=1.0[narr]"]
+    mix_labels = ["[narr]"]
+    next_input_index = 2
+
+    if args.sfx:
+        print("Synthesizing transition ticks...")
+        cut_times = [s["cut_time"] for s in shots[1:]]  # skip t=0, nothing to punctuate yet
+        build_tick_track(cut_times, audio_duration, tick_track_path)
+        audio_inputs += ["-i", str(tick_track_path)]
+        filter_parts.append(f"[{next_input_index}:a]volume=0.35[ticks]")
+        mix_labels.append("[ticks]")
+        next_input_index += 1
+
+    if args.music:
+        print("Synthesizing ambient pad...")
+        audio_inputs += ["-f", "lavfi", "-i", f"sine=frequency=110:duration={audio_duration:.3f}"]
+        audio_inputs += ["-f", "lavfi", "-i", f"sine=frequency=110.6:duration={audio_duration:.3f}"]
+        i1, i2 = next_input_index, next_input_index + 1
+        filter_parts.append(
+            f"[{i1}:a][{i2}:a]amix=inputs=2:duration=first:normalize=0,"
+            f"lowpass=f=300,volume=0.045[pad]"
+        )
+        mix_labels.append("[pad]")
+        next_input_index += 2
+
+    if len(mix_labels) > 1:
+        filter_parts.append(
+            f"{''.join(mix_labels)}amix=inputs={len(mix_labels)}:duration=first:"
+            f"normalize=0,alimiter=limit=0.95[aout]"
+        )
+        final_map = "[aout]"
+    else:
+        final_map = "[narr]"
+
     print("Muxing audio...")
-    subprocess.run(["ffmpeg", "-y", "-i", str(silent_concat), "-i", str(audio_path),
-                     "-map", "0:v:0", "-map", "1:a:0",
-                     "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                     "-shortest", str(final_out)], check=True)
+    cmd = ["ffmpeg", "-y", "-i", str(silent_concat), *audio_inputs,
+           "-filter_complex", ";".join(filter_parts),
+           "-map", "0:v:0", "-map", final_map,
+           "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+           "-shortest", str(final_out)]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"ffmpeg audio mux failed:\n{r.stderr[-3000:]}")
     silent_concat.unlink(missing_ok=True)
+    tick_track_path.unlink(missing_ok=True)
 
     final_dur = ffprobe_duration(final_out)
     print(f"\nDone: {final_out}")
     print(f"Final duration: {final_dur:.2f}s ({final_dur/60:.2f} min) vs audio {audio_duration:.2f}s")
+    print(f"sfx={'on' if args.sfx else 'off'}  music={'on' if args.music else 'off'}")
 
 
 if __name__ == "__main__":

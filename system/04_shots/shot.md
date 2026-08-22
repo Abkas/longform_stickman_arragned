@@ -9,18 +9,92 @@ Researched how Ink Explainer-style channels are actually made, not just guessed.
 - **The AI-stickman channel cluster (Ink Explainer, Deep Epoch, Before Civilization, Stick Plot, Brook Explains, Mack Explains, Before The Clock — see `system/shared/references/channel_reports/2026-08-04_niche_landscape.md`)**: this exact genre is documented as a real, currently-exploding 2026 niche built on a specific three-tool AI workflow — **Claude AI for scripting, ElevenLabs for voiceover, and Flow AI for visuals.** That is precisely the pipeline already locked for this channel (`CLAUDE.md`) — not a guess, but a match to the actual documented production method for this exact channel cluster. One real warning that came with it: YouTube has started demonetizing mass-produced, low-effort AI content — quality and genuine human oversight at each step (the sourcing rigor already locked in `system/03_script/structure.md`, the tone work in `system/03_script/persona.md`) are what keep a channel like this monetizable, not just running the pipeline on autopilot.
 - **OverSimplified and Sam O'Nella Academy — different production tier, tone-only borrowing.** OverSimplified is hand-animated in Adobe After Effects with assets built in Photoshop — a real animator's pipeline, not AI-generated. Sam O'Nella Academy is drawn by hand in MS Paint — deliberately lo-fi, fully manual. Both are why their *writing/tone* (the OverSimplified/Sam O'Nella blend in `system/03_script/persona.md`) is worth borrowing, but their *production method* isn't something an AI pipeline replicates — we're taking their comedic technique, not their tooling.
 
-## Shot density: one image per sentence (locked 2026-08-05)
+## Shot density v1: one image per sentence (locked 2026-08-05, superseded 2026-08-13 — see v2 below)
 
 Researched actual practice for this specific genre (AI-generated faceless explainer channels), not generic film-editing advice. Two data points:
 
 - Generic YouTube editing research suggests 8-12 cuts/minute for engaged tutorial-style content, with variation (fast micro-cuts mixed with longer holds) rather than a flat rhythm — useful context, but that's a different genre from a narrated documentary-style explainer.
 - **The actual common default for AI-generated faceless-video tools is one image per sentence** — several script-to-video tools in this space generate a matching image prompt per sentence by default, splitting at natural sentence/paragraph boundaries so every scene is an independently swappable visual unit.
 
-**Method used for `shot_list.md`:** split the locked script into its real sentences programmatically, then merge any sentence under 8 words forward into the next one (so no shot is an unusably short fragment, e.g. "Global population." alone). This produced **98 shots** for the ~2,451-word script — about 8.2 cuts/minute, denser than a slow documentary hold, close to the faster end of general pacing research. Apply this same method to every future video's shot list: split by sentence, merge tiny fragments, one shot per resulting unit.
+**Method used for `shot_list.md`:** split the locked script into its real sentences programmatically, then merge any sentence under 8 words forward into the next one (so no shot is an unusably short fragment, e.g. "Global population." alone). This produced **98 shots** for video 001's ~2,451-word script (111 for video 002's ~2,561-word script) — roughly one shot per 23 words.
 
-**Do this programmatically, not by hand** — build the shot skeleton (sentence text + word count + duration) with a script first, verify the total duration and word-for-word coverage matches `script.md` exactly, *then* write prompts. Hand-computing durations across 90+ shots is error-prone (this drifted noticeably the first time it was tried by hand) — always verify the final shot list's concatenated narration matches the script word-for-word before treating it as locked.
+**Status: this rule produced videos 001 and 002. It's kept here as history and both those videos' own `shot_list.md`s stay built this way — don't retroactively rebuild them.** After watching video 002's actual result, the user's direct feedback was that shot planning at this density still felt thin and the visuals weren't good enough — see v2 below, which replaces this rule for **video 003 onward**.
 
-## Pacing fix: cap the long end too (lesson from watching video 001's actual render, locked 2026-08-12)
+## Shot density v2: maximum density + itemized lists (locked 2026-08-13, video 003 onward)
+
+Two compounding changes, both aimed at "the video needs way more, way more specific visuals," not just more shots for their own sake:
+
+**1. Split at clause boundaries, not just sentence boundaries.** Instead of
+one shot per sentence (~23 words/shot at v1's density), split additionally
+at commas, coordinating conjunctions (and/but/or/so), subordinating
+conjunctions (because/since/when/while/although), and semicolons — aim for
+roughly **8-12 words per shot as the new baseline**, close to one shot per
+distinct idea/phrase rather than per sentence. For a script the same length
+as video 002's (~2,561 words), this lands around **250-350+ shots** instead
+of 111 — expect the total shot count and generation cost/time to roughly
+triple. This is a deliberate, confirmed trade-off (2026-08-13): the user
+chose "maximum" density over a more moderate ~2x increase, explicitly
+accepting the cost/time hit for a visually richer result.
+
+**2. Itemized-list override — takes priority over everything else,
+including the merge-forward rule below.** When a clause or sentence
+enumerates 2+ distinct things — a comma-list, "X, Y, or Z", "X, Y, and Z",
+anything that names multiple concrete items, actions, or examples in a
+row — give **each item its own shot**, regardless of word count, even a
+single word. Example: narration "societies turned to hoarding, trading, or
+raiding" becomes 3 shots, one per item, not one shot covering the whole
+clause. Each item-shot:
+- Gets its own `- Duration: ~1.5-2.5s` (a new short "flash" tier, distinct
+  from the normal 5-10s narrative shot) — several of these back-to-back
+  should read as one quick-cut burst, not three slow holds.
+- Gets a **genuinely distinct visual treatment** per item (a different
+  icon, a different character action, a different concrete example) —
+  never the same generic image repeated with a different label, which
+  would defeat the entire point of calling these out individually.
+- Classify each item-shot normally (`character`/`diagram`/`environment`)
+  based on what that specific item actually depicts — there's no new
+  `- Visual:` type for this, just apply the existing three per-item.
+- No new `shot_list.md` field is needed for this — the short
+  `~1.5-2.5s` duration on several consecutive shots is itself the signal
+  that they're a burst, and `assemble.py`/`generate_visuals.py`'s existing
+  parsers don't need to know anything changed.
+
+**3. Revised merge-forward safety net.** v1's "merge anything under 8 words
+forward" rule is too aggressive for v2's target density — at ~8-12
+words/shot baseline, plenty of legitimate, meaningful shots will
+legitimately be short. Lower the merge threshold to **under 4 words** for
+*ordinary* (non-list) fragments — only merge genuinely unshowable stray
+fragments (a lone transitional word, a dangling conjunction), not every
+short-but-meaningful clause. **List items from rule 2 are exempt from this
+merge rule entirely** — a one-word item shot stays its own shot.
+
+**4. Raise the `Type: video` ratio too.** Video 002 shipped with only 5 of
+111 shots (4.5%) as real motion — everything else was a still with a
+pan/zoom applied at assembly. That read as a slideshow despite the Ken
+Burns treatment (see `system/07_assembly/assembly.md`'s "Known limitation:
+motion ratio"). At v2's higher shot count, don't just scale the *count* of
+video shots proportionally and call it done — actively look for beats that
+need real movement (a gesture landing, a reaction, a head turn) and mark
+them `Type: video` more liberally than v1 did. This is a direction, not a
+hard percentage — flag candidates generously in the build report rather
+than defaulting to `image` out of caution.
+
+**Do this programmatically, not by hand** — build the shot skeleton
+(clause/item text + word count + duration) with a script first, verify the
+total duration and word-for-word coverage matches `script.md` exactly,
+*then* write prompts. Hand-computing durations across hundreds of shots is
+even more error-prone than it was at v1's ~100-shot scale — always verify
+the final shot list's concatenated narration matches the script word-for-word
+before treating it as locked.
+
+**Given the much larger batch size this produces, the post-batch
+verification process in "Post-batch verification" below matters even more
+than it did at v1's scale** — the queue-desync bug that corrupted 47% of
+video 002's 111-shot batch has more room to cascade across 300+ shots, not
+less. Generate in smaller chunks, hash-check for duplicates immediately,
+don't trust a finished batch by default.
+
+## Pacing fix: cap the long end too (lesson from watching video 001's actual render, locked 2026-08-12; word-count references below predate v2's density change — see note at the end of this section)
 
 The rule above only protects against shots being too *short* (merge sub-8-word
 fragments forward). Watching video 001's finished render surfaced the
@@ -62,6 +136,16 @@ narration kept moving. Three fixes, apply to every future `shot_list.md`
 Net effect: fewer long static holds, more shot-to-shot visual variation even
 within a single scene/character, and short character beats get their own
 dynamic moment instead of disappearing into a neighboring shot's stillness.
+
+**Reconciling with v2 (video 003 onward):** rules 1 and 2 above still apply
+unchanged — cap long shots, rotate character poses. Rule 3's "<8-word"
+threshold and the opening paragraph's "sub-8-word" merge reference are both
+v1 numbers; under v2, the ordinary merge threshold is 4 words (not 8), and
+list items are exempt from merging entirely regardless of length — see
+v2's "Revised merge-forward safety net" and "Itemized-list override" above.
+Rule 3's actual intent (a short punchy character beat deserves `Type: video`
+rather than getting merged into stillness) still holds — just apply it
+against v2's 4-word threshold, not the original 8.
 
 ## Primary method: fully self-contained prompts, no reference image required (revised 2026-08-05)
 

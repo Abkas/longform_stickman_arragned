@@ -5,7 +5,7 @@ shot_list.md, using the Gemini API directly.
 
 Prompts in shot_list.md are expected to be fully self-contained (character
 appearance / art style spelled out in the prompt text itself, per each shot's
-"- Visual:" tag — see system/04_shots/workflow.md's "Primary method"
+"- Visual:" tag — see system/04_shots/shot.md's "Primary method"
 section) rather than relying on an attached reference image, since some batch
 tools only support one reference image for a whole batch and that risks forcing
 a character into diagram/environment shots that shouldn't have one. A character
@@ -20,7 +20,7 @@ through the API, and Flow itself has no official automation API.
 Each shot in shot_list.md can specify "- Type: image" or "- Type: video"
 (defaults to image if omitted). Video generation is meaningfully more expensive
 and slower (polls for completion, ~1-3 min per clip) than image generation —
-per system/04_shots/workflow.md's recommendation, most shots should be
+per system/04_shots/shot.md's recommendation, most shots should be
 images with a small number of video clips reserved for key dynamic beats.
 
 KNOWN ISSUE (as of 2026-08-04): there are live reports of the video API's
@@ -30,7 +30,7 @@ reference_images argument, check the Gemini API developer forum for current
 status — this may need to fall back to a strongly-worded text description of
 the character instead of an attached reference image until Google fixes it.
 
-Neither image nor video generation is free — see system/04_shots/workflow.md
+Neither image nor video generation is free — see system/04_shots/shot.md
 for current per-shot cost estimates. Not huge for one video (a few dollars),
 but not zero either.
 
@@ -77,9 +77,9 @@ IMAGE_MODEL = "gemini-3.1-flash-image-preview"
 VIDEO_MODEL = "veo-3.1-generate-preview"
 VIDEO_POLL_SECONDS = 10
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-CHARACTER_REF = REPO_ROOT / "assets" / "character" / "host_reference.png"
-STYLE_REF = REPO_ROOT / "assets" / "character" / "style_reference.png"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+CHARACTER_REF = REPO_ROOT / "system" / "05_visuals" / "character_reference" / "host_reference.png"
+STYLE_REF = REPO_ROOT / "system" / "05_visuals" / "character_reference" / "style_reference.png"
 
 SHOT_BLOCK_RE = re.compile(r"^##\s*Shot\s+(\d+)\s*$", re.MULTILINE)
 PROMPT_LINE_RE = re.compile(r"^-\s*Prompt:\s*(.+)$", re.MULTILINE)

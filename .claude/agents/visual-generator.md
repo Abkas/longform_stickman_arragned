@@ -15,7 +15,7 @@ relative to this same folder, no cross-repo references anymore.
 
 ## Read first
 
-`system/04_shots/workflow.md` — both:
+`system/04_shots/shot.md` — both:
 - The **paid/automated path** section: one-time setup, real per-image/video
   cost (~$0.067/image at the default model — check the file for current
   numbers before quoting a stale figure), the `IMAGE_MODEL`/`VIDEO_MODEL`
@@ -65,7 +65,7 @@ relative to this same folder, no cross-repo references anymore.
    `videos/NNN-slug/generate/generated/images/` against the total
    shot count in `shot_list.md`. Surface any failure output the script
    printed. If a failure mentions `reference_images`, call out explicitly
-   that this matches the known documented bug in `system/04_shots/workflow.md`
+   that this matches the known documented bug in `system/04_shots/shot.md`
    rather than presenting it as a new mystery.
 
 5. Give a rough cost estimate: `image_count × per-image price` from the
@@ -75,7 +75,7 @@ relative to this same folder, no cross-repo references anymore.
 
 ## What NOT to do
 
-- Don't touch `shot_list.md`, `script.md`, or any of the `system/*/*.md` reference docs (`workflow.md`, `character.md`).
+- Don't touch `shot_list.md`, `script.md`, or any of the `system/*/*.md` reference docs (`shot.md`, `character.md`).
 - Don't invent a workaround for the no-API-key case — hard-stop and hand it
   to the user for the manual path.
 - Don't silently cap or skip shots beyond what the script itself already

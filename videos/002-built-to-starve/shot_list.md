@@ -13,7 +13,7 @@ clause break — producing **111 shots**. Concatenated narration verified
 **word-for-word identical** to `script.md`'s narration body, programmatically
 checked, not eyeballed.
 
-**Pacing-fix rules applied** (per `system/04_shots/workflow.md`'s
+**Pacing-fix rules applied** (per `system/04_shots/shot.md`'s
 2026-08-12 "Pacing fix: cap the long end too" section, written after video
 001's finished render showed long static holds):
 - No shot exceeds ~12s.
@@ -25,23 +25,23 @@ checked, not eyeballed.
   handing over food, Shot 075 "layering" gesture, Shot 082 gorging on food).
   Note: the merge step above already absorbs every sub-8-word fragment into
   a longer neighboring shot, so the literal "<8-word character beat" trigger
-  from `workflow.md` never fires post-merge — these 5 were chosen by
+  from `shot.md` never fires post-merge — these 5 were chosen by
   judgment instead, against the same underlying goal (a genuinely dynamic
   beat that a static image can't sell), not the strict word-count rule.
-  Worth revisiting the merge-vs-promote ordering in `workflow.md` for the
+  Worth revisiting the merge-vs-promote ordering in `shot.md` for the
   next video so short dynamic beats can be pulled out *before* merging,
   not after.
 
 **Style suffixes:** `character` shots use the exact locked suffix from
 `system/04_shots/character.md` verbatim. `diagram`/`environment` shots
-use `system/04_shots/workflow.md`'s current suffix blocks (both fixed
+use `system/04_shots/shot.md`'s current suffix blocks (both fixed
 2026-08-12 to backfill two clauses — "keep composition simple," "don't
 invent extra content" — that video 001's actual shots used but the doc had
 been missing) plus a **video-002-specific color-palette line**: dusty
 ochre/bone-white/rust-brown for scarcity beats, warm amber/honey for
 feast/abundance beats, cool clinical blue-grey for diagram/data-callout
 shots — deliberately not reusing video 001's warm-firelight/charcoal
-palette, since `workflow.md` now calls for each video to lock its own.
+palette, since `shot.md` now calls for each video to lock its own.
 
 **2026-08-13 update — post-generation audit + suffix revision.** All 111
 shots were generated (browser batch extension) and then individually
@@ -56,7 +56,7 @@ and had a real wording tension (naming Cyanide & Happiness as a style
 reference while separately demanding thin stick limbs — C&H's own house
 style is fuller-bodied) that likely explains the character-model drift seen
 across most `character`-type shots. Both fixed in `character.md` directly
-(see its "Video 002 drift" section), and `workflow.md`'s diagram/environment
+(see its "Video 002 drift" section), and `shot.md`'s diagram/environment
 suffixes strengthened the same way. **All 111 `- Prompt:` lines below have
 already been updated in place** with the revised suffix text (programmatic
 substring replacement, verified 48/48 character, 56/56 diagram, 7/7

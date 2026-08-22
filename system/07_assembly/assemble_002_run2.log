@@ -1,0 +1,158 @@
+ffmpeg version n8.1.2 Copyright (c) 2000-2026 the FFmpeg developers
+  built with gcc 16 (GCC)
+  configuration: --prefix=/usr --disable-debug --disable-static --disable-stripping --enable-amf --enable-avisynth --enable-cuda-llvm --enable-lto --enable-fontconfig --enable-frei0r --enable-gmp --enable-gnutls --enable-gpl --enable-ladspa --enable-lcms2 --enable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libdav1d --enable-libdrm --enable-libdvdnav --enable-libdvdread --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgsm --enable-libharfbuzz --enable-libiec61883 --enable-libjack --enable-libjxl --enable-libmodplug --enable-libmp3lame --enable-libopencore_amrnb --enable-libopencore_amrwb --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libplacebo --enable-libpulse --enable-librav1e --enable-librsvg --enable-librubberband --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtheora --enable-libv4l2 --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpl --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxcb --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-nvdec --enable-nvenc --enable-opencl --enable-opengl --enable-shared --enable-vapoursynth --enable-version3 --enable-vulkan --disable-decoder=magicyuv
+  libavutil      60. 26.102 / 60. 26.102
+  libavcodec     62. 28.102 / 62. 28.102
+  libavformat    62. 12.102 / 62. 12.102
+  libavdevice    62.  3.102 / 62.  3.102
+  libavfilter    11. 14.102 / 11. 14.102
+  libswscale      9.  5.102 /  9.  5.102
+  libswresample   6.  3.102 /  6.  3.102
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x55734fc42900] Auto-inserting h264_mp4toannexb bitstream filter
+Input #0, concat, from 'videos/002-built-to-starve/generate/render_clips/_concat_list.txt':
+  Duration: N/A, start: 0.000000, bitrate: 1648 kb/s
+  Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1920x1080 [SAR 2881:2880 DAR 2881:1620], 1648 kb/s, 30 fps, 30 tbr, 15360 tbn
+    Metadata:
+      handler_name    : VideoHandler
+      encoder         : Lavc62.28.102 libx264
+Stream mapping:
+  Stream #0:0 -> #0:0 (copy)
+Output #0, mp4, to 'videos/002-built-to-starve/output/_silent_concat.mp4':
+  Metadata:
+    encoder         : Lavf62.12.102
+  Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuvj420p(pc, bt470bg/unknown/unknown, progressive), 1920x1080 [SAR 2881:2880 DAR 2881:1620], q=2-31, 1648 kb/s, 30 fps, 30 tbr, 15360 tbn
+    Metadata:
+      handler_name    : VideoHandler
+      encoder         : Lavc62.28.102 libx264
+Press [q] to stop, [?] for help
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x55734fc42900] Auto-inserting h264_mp4toannexb bitstream filter
+    Last message repeated 47 times
+frame=10898 fps=0.0 q=-1.0 size=   43008KiB time=00:06:03.16 bitrate= 970.1kbits/s speed= 726x elapsed=0:00:00.50    [mov,mp4,m4a,3gp,3g2,mj2 @ 0x55734fc42900] Auto-inserting h264_mp4toannexb bitstream filter
+    Last message repeated 46 times
+frame=23360 fps=23352 q=-1.0 size=  102144KiB time=00:12:58.60 bitrate=1074.7kbits/s speed= 778x elapsed=0:00:01.00    [mov,mp4,m4a,3gp,3g2,mj2 @ 0x55734fc42900] Auto-inserting h264_mp4toannexb bitstream filter
+    Last message repeated 14 times
+[out#0/mp4 @ 0x55734fc99640] video:120672KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.271234%
+frame=27735 fps=24374 q=-1.0 Lsize=  121000KiB time=00:15:24.43 bitrate=1072.3kbits/s speed= 812x elapsed=0:00:01.13    
+Audio: videos/002-built-to-starve/generate/voice/audio.mpeg (924.53s) | documented shot-duration sum: 742.00s | scale factor: 1.2460
+
+Rendering per-shot Ken Burns clips...
+  shot   1  src=vdieo__0022222_v1       dur= 6.23s
+  shot   2  src=vdieo__0022222_v1       dur= 7.48s
+  shot   3  src=vdieo__0022222_v1       dur= 3.74s
+  shot   4  src=vdieo__0022222_v1       dur= 7.48s
+  shot   5  src=vdieo__0022222_v1       dur= 4.98s
+  shot   6  src=vdieo__0022222_v1       dur= 3.74s
+  shot   7  src=vdieo__0022222_v1       dur=13.71s
+  shot   8  src=vdieo__0022222_v1       dur= 6.23s
+  shot   9  src=vdieo__0022222_v1       dur= 4.98s
+  shot  10  src=vdieo__0022222_v1       dur= 4.98s
+  shot  11  src=vdieo__0022222_v1       dur=11.21s
+  shot  12  src=vdieo__0022222_v1       dur= 8.72s
+  shot  13  src=vdieo__0022222_v1       dur=11.21s
+  shot  14  src=vdieo__0022222_v1       dur= 3.74s
+  shot  15  src=vdieo__0022222_v1       dur= 9.97s
+  shot  16  src=vdieo__0022222_v1       dur= 7.48s
+  shot  17  src=vdieo__0022222_v1       dur=13.71s
+  shot  18  src=vdieo__0022222_v1       dur= 3.74s
+  shot  19  src=vdieo__0022222_v1       dur= 3.74s
+  shot  20  src=vdieo__0022222_v1       dur= 8.72s
+  shot  21  src=vdieo__0022222_v1       dur=11.21s
+  shot  22  src=vdieo__0022222_v1       dur= 7.48s
+  shot  23  src=vdieo__0022222_v1       dur= 4.98s
+  shot  24  src=vdieo__0022222_v1       dur= 3.74s
+  shot  25  src=vdieo__0022222_v1       dur= 3.74s
+  shot  26  src=vdieo__0022222_v1       dur= 9.97s
+  shot  27  src=vdieo__0022222_v1       dur= 3.74s
+  shot  28  src=vdieo__0022222_v1       dur= 7.48s
+  shot  29  src=vdieo__0022222_v1       dur= 9.97s
+  shot  30  src=vdieo__0022222_v1       dur= 3.74s
+  shot  31  src=vdieo__0022222_v1       dur=13.71s
+  shot  32  src=vdieo__0022222_v1       dur= 9.97s
+  shot  33  src=vdieo__0022222_v1       dur= 4.98s
+  shot  34  src=vdieo__0022222_v1       dur= 8.72s
+  shot  35  src=vdieo__0022222_v1       dur= 4.98s
+  shot  36  src=vdieo__0022222_v1       dur=13.71s
+  shot  37  src=vdieo__0022222_v1       dur= 6.23s
+  shot  38  src=vdieo__0022222_v1       dur= 7.48s
+  shot  39  src=vdieo__0022222_v1       dur= 6.23s
+  shot  40  src=vdieo__0022222_v1       dur= 9.97s
+  shot  41  src=vdieo__0022222_v1       dur= 7.48s
+  shot  42  src=vdieo__0022222_v1       dur= 4.98s
+  shot  43  src=vdieo__0022222_v1       dur= 8.72s
+  shot  44  src=vdieo__0022222_v1       dur= 9.97s
+  shot  45  src=vdieo__0022222_v1       dur= 6.23s
+  shot  46  src=vdieo__0022222_v1       dur=13.71s
+  shot  47  src=vdieo__0022222_v1       dur= 3.74s
+  shot  48  src=vdieo__0022222_v1       dur= 6.23s
+  shot  49  src=vdieo__0022222_v1       dur=12.46s
+  shot  50  src=vdieo__0022222_v1       dur= 9.97s
+  shot  51  src=vdieo__0022222_v1       dur= 7.48s
+  shot  52  src=vdieo__0022222_v1       dur= 8.72s
+  shot  53  src=vdieo__0022222_v1       dur= 9.97s
+  shot  54  src=vdieo__0022222_v1       dur=11.21s
+  shot  55  src=vdieo__0022222_v1       dur=11.21s
+  shot  56  src=vdieo__0022222_v1       dur= 6.23s
+  shot  57  src=vdieo__0022222_v1       dur= 7.48s
+  shot  58  src=vdieo__0022222_v1       dur= 7.48s
+  shot  59  src=vdieo__0022222_v1       dur=11.21s
+  shot  60  src=vdieo__0022222_v1       dur= 3.74s
+  shot  61  src=vdieo__0022222_v1       dur= 7.48s
+  shot  62  src=vdieo__0022222_v1       dur=12.46s
+  shot  63  src=vdieo__0022222_v1       dur= 3.74s
+  shot  64  src=vdieo__0022222_v1       dur=11.21s
+  shot  65  src=vdieo__0022222_v1       dur= 3.74s
+  shot  66  src=vdieo__0022222_v1       dur= 9.97s
+  shot  67  src=vdieo__0022222_v1       dur= 2.49s
+  shot  68  src=vdieo__0022222_v1       dur= 3.74s
+  shot  69  src=vdieo__0022222_v1       dur=11.21s
+  shot  70  src=vdieo__0022222_v1       dur=13.71s
+  shot  71  src=vdieo__0022222_v1       dur=12.46s
+  shot  72  src=vdieo__0022222_v1       dur= 2.49s
+  shot  73  src=vdieo__0022222_v1       dur=11.21s
+  shot  74  src=vdieo__0022222_v1       dur= 6.23s
+  shot  75  src=vdieo__0022222_v1       dur=12.46s
+  shot  76  src=vdieo__0022222_v1       dur= 2.49s
+  shot  77  src=vdieo__0022222_v1       dur= 3.74s
+  shot  78  src=vdieo__0022222_v1       dur= 7.48s
+  shot  79  src=vdieo__0022222_v1       dur= 8.72s
+  shot  80  src=vdieo__0022222_v1       dur= 7.48s
+  shot  81  src=vdieo__0022222_v1       dur=12.46s
+  shot  82  src=vdieo__0022222_v1       dur= 7.48s
+  shot  83  src=vdieo__0022222_v1       dur= 8.72s
+  shot  84  src=vdieo__0022222_v1       dur= 8.72s
+  shot  85  src=vdieo__0022222_v1       dur= 8.72s
+  shot  86  src=vdieo__0022222_v1       dur=11.21s
+  shot  87  src=vdieo__0022222_v1       dur=14.95s
+  shot  88  src=asdf                    dur= 7.48s
+  shot  89  src=asdf                    dur= 8.72s
+  shot  90  src=asdf                    dur= 8.72s
+  shot  91  src=asdf                    dur= 9.97s
+  shot  92  src=asdf                    dur= 9.97s
+  shot  93  src=asdf                    dur=12.46s
+  shot  94  src=asdf                    dur= 7.48s
+  shot  95  src=asdf                    dur=11.21s
+  shot  96  src=asdf                    dur= 9.97s
+  shot  97  src=asdf                    dur= 8.72s
+  shot  98  src=asdf                    dur= 8.72s
+  shot  99  src=asdf                    dur= 7.48s
+  shot 100  src=asdf                    dur=13.71s
+  shot 101  src=asdf                    dur= 8.72s
+  shot 102  src=asdf                    dur=12.46s
+  shot 103  src=asdf                    dur= 7.48s
+  shot 104  src=asdf                    dur= 7.48s
+  shot 105  src=asdf                    dur= 4.98s
+  shot 106  src=asdf                    dur= 8.72s
+  shot 107  src=asdf                    dur=12.46s
+  shot 108  src=asdf                    dur= 8.72s
+  shot 109  src=asdf                    dur= 9.97s
+  shot 110  src=asdf                    dur=12.46s
+  shot 111  src=asdf                    dur=13.71s
+
+Concatenating...
+Synthesizing transition ticks...
+Synthesizing ambient pad...
+Muxing audio...
+
+Done: videos/002-built-to-starve/output/002-built-to-starve_v1.mp4
+Final duration: 924.50s (15.41 min) vs audio 924.53s
+sfx=on  music=on

@@ -50,7 +50,7 @@ didn't have, both now fixed in the locked text above:
    added speech bubbles/sound-effect text/captions that weren't in the
    prompt at all (e.g. a fabricated "*CRUNCH! SMACK! CHOMP! SLURP!*"
    bubble). Diffing against the `diagram`/`environment` suffixes in
-   `workflow.md` found the actual gap: both of those suffixes already
+   `shot.md` found the actual gap: both of those suffixes already
    explicitly forbid inventing on-screen text — this one never did. Fixed
    by adding the same prohibition here.
 2. **Full-bodied character instead of a stick figure.** Most/all of video

@@ -3,7 +3,7 @@
 Generate the channel's character and style reference images via the Gemini API.
 
 OPTIONAL, not required for the primary workflow (see
-system/04_shots/workflow.md's "Primary method" section) — shot_list.md prompts are now
+system/04_shots/shot.md's "Primary method" section) — shot_list.md prompts are now
 fully self-contained (style described in the prompt text itself), so no
 reference image is needed to generate on-style shots. This script is still
 useful as a personal visual-QA anchor (eyeball generated shots against it by
@@ -38,8 +38,8 @@ load_dotenv()  # reads .env at the repo root if present; no-op otherwise
 # remaining lifespan) in favor of this newer model.
 MODEL = "gemini-3.1-flash-image-preview"
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-OUT_DIR = REPO_ROOT / "assets" / "character"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+OUT_DIR = REPO_ROOT / "system" / "05_visuals" / "character_reference"
 
 CHARACTER_PROMPT = (
     "A single stickman-style animated character reference sheet, front-facing, "

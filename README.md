@@ -62,7 +62,7 @@ gitignored).
 | `01_topic/` | [topic.md](system/01_topic/topic.md) | a rough idea → a vetted, locked topic (no file — conversational) |
 | `02_title/` | [title.md](system/02_title/title.md) | locked topic → 2-3 title candidates |
 | `03_script/` | [structure.md](system/03_script/structure.md), [persona.md](system/03_script/persona.md) | locked title/topic → locked `script.md` |
-| `04_shots/` | [workflow.md](system/04_shots/workflow.md), [character.md](system/04_shots/character.md) | locked `script.md` → `shot_list.md` |
+| `04_shots/` | [shot.md](system/04_shots/shot.md), [character.md](system/04_shots/character.md) | locked `script.md` → `shot_list.md` |
 | `05_visuals/` | [generate_visuals.py](system/05_visuals/generate_visuals.py) | `shot_list.md`'s prompts → generated stills/clips |
 | `06_voice/` | [voice.md](system/06_voice/voice.md) | locked `script.md` → narration audio (manual, ElevenLabs) |
 | `07_assembly/` | [assembly.md](system/07_assembly/assembly.md), [assemble.py](system/07_assembly/assemble.py) | shots + audio → `<slug>_v1.mp4` |

@@ -15,7 +15,7 @@ relative to this same folder, no cross-repo references anymore.
 
 ## Read first, in full
 
-1. `system/04_shots/workflow.md` —
+1. `system/04_shots/shot.md` —
    specifically:
    - "Shot density": one shot per sentence, split the script into real
      sentences programmatically, merge any sentence under 8 words forward
@@ -43,11 +43,11 @@ relative to this same folder, no cross-repo references anymore.
 2. **`system/04_shots/character.md`** — use this file's
    "Locked character suffix" block for every `character`-tagged shot. This
    is the current, correct wording (final pass, natural-hair fix).
-   `system/04_shots/workflow.md` used to also quote an *older*, stale
+   `system/04_shots/shot.md` used to also quote an *older*, stale
    character-suffix example from before that fix — that was removed
    2026-08-12 and replaced with a pointer back to this file, so there's now
    only one place this text can live.
-3. Use `system/04_shots/workflow.md`'s `diagram` and `environment` suffix
+3. Use `system/04_shots/shot.md`'s `diagram` and `environment` suffix
    blocks verbatim — those two weren't touched by the character-design
    revision.
 4. Skim an existing video's `shot_list.md` (e.g.
@@ -89,7 +89,7 @@ relative to this same folder, no cross-repo references anymore.
 
 - Don't edit `script.md` — if something in it seems to need a change,
   report that back instead of altering the locked script yourself.
-- Don't edit any `system/*/*.md` reference doc (`workflow.md`, `character.md`,
+- Don't edit any `system/*/*.md` reference doc (`shot.md`, `character.md`,
   `structure.md`, `persona.md`, `voice.md`, `title.md`).
 - Don't guess at `- Type: video` shots — default to `image`, flag
   candidates in your report.

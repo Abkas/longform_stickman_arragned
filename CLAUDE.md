@@ -41,7 +41,7 @@ monetized via ad-network/YPP revenue.
   even after a 2026-08-13 wording fix, so "locked" describes the intended
   design, not a guarantee every batch will hit it.**
 
-These two files (plus `structure.md`, `title.md`, `voice.md`, `workflow.md`
+These two files (plus `structure.md`, `title.md`, `voice.md`, `shot.md`
 — the rest of the reference set under `system/`) are genuinely frozen —
 skills/agents read them, none of them edit them (see each skill/agent's own
 "What NOT to do" section).
@@ -86,7 +86,7 @@ with no dedicated skill or agent wrapping them yet.
 | # | Slug | Status | Notes |
 |---|------|--------|-------|
 | 001 | toba-supervolcano | **Upload-ready** | "How Did Ancient Humans Survive Earth's Worst Volcano?" — myth-busting angle. Script locked (2,451 words, ~12 min). 98 shots, all generated, VO generated, finished render exists (`output/001-toba-supervolcano_v2.mp4` + thumbnail). `description.md` locked. Treated as a frozen historical record during the 2026-08-13 restructure — a handful of exact-match paths got swept up in the global find/replace, but several already-stale pre-flatten paths from before that (e.g. `assets/brain/visuals/flow_workflow.md`, `assets/brain/visuals/character_design.md`) were deliberately left alone rather than fully repaired, since this is history, not a live doc. |
-| 002 | built-to-starve | **In progress, real problems found** | Script locked (2,561 words). `shot_list.md`: 111 shots — but its `- Duration:` fields are still computed at an assumed 207 WPM; the real ElevenLabs audio measured 166 WPM (24.6% overrun), not yet fixed at the source (see `pipeline.md`'s stage-04 status). First image batch (browser batch extension) came back 47% wrong (52/111 shots) from a queue-desync bug — root-caused and the *doc* gaps that let invented text through are fixed (`system/04_shots/character.md`/`workflow.md`), but a second regenerated batch still shows the character off the locked stick-figure design. A rough assembly exists (`output/002-built-to-starve_v1.mp4`, ~15:24) built from a mixed two-folder image source (`generate/image_v2/vdieo__0022222_v1` for shots 1-87, `generate/image_v2/asdf` for shots 88-111) via `assemble.py` — **not upload-ready**: character style still wrong, duration-sync is only a proportional approximation, motion ratio is low (5/111 shots). |
+| 002 | built-to-starve | **In progress, real problems found** | Script locked (2,561 words). `shot_list.md`: 111 shots — but its `- Duration:` fields are still computed at an assumed 207 WPM; the real ElevenLabs audio measured 166 WPM (24.6% overrun), not yet fixed at the source (see `pipeline.md`'s stage-04 status). First image batch (browser batch extension) came back 47% wrong (52/111 shots) from a queue-desync bug — root-caused and the *doc* gaps that let invented text through are fixed (`system/04_shots/character.md`/`shot.md`), but a second regenerated batch still shows the character off the locked stick-figure design. A rough assembly exists (`output/002-built-to-starve_v1.mp4`, ~15:24) built from a mixed two-folder image source (`generate/image_v2/vdieo__0022222_v1` for shots 1-87, `generate/image_v2/asdf` for shots 88-111) via `assemble.py` — **not upload-ready**: character style still wrong, duration-sync is only a proportional approximation, motion ratio is low (5/111 shots). |
 
 ## Known gaps
 
