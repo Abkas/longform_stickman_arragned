@@ -9,9 +9,22 @@ appearance / art style spelled out in the prompt text itself, per each shot's
 section) rather than relying on an attached reference image, since some batch
 tools only support one reference image for a whole batch and that risks forcing
 a character into diagram/environment shots that shouldn't have one. A character
-reference image at system/05_visuals/character_reference/host_reference.png is therefore OPTIONAL —
-if present, it gets attached as an extra consistency aid; if absent, generation
-just proceeds on the prompt text alone.
+reference SET at system/05_visuals/character_reference/host_reference_*.png
+(see generate_character_reference.py) is therefore OPTIONAL — if present, it
+gets attached, but ONLY on "- Visual: character" shots, never on diagram/
+environment shots, for the same reason a batch tool shouldn't force a
+character reference onto a shot that isn't supposed to have one. If absent,
+generation just proceeds on the prompt text alone.
+
+Character shots also default to a different, pricier model than everything
+else (see CHARACTER_MODEL below) — research 2026-08-22 found Gemini 3 Pro
+Image ("Nano Banana Pro") specifically documents support for up to 5
+character-reference images used to hold one character's identity consistent
+across generations, which is exactly the video-002 failure mode (character
+style drifted off-model across a batch using the same text prompt). The
+flash model used for diagram/environment shots doesn't carry that same
+documented guarantee, but is fine for those since there's no recurring
+character identity to hold onto there.
 
 This bypasses Google Flow's UI entirely — Flow wraps the same underlying
 Gemini/Imagen (image) and Veo (video) models, which are also available directly
@@ -67,9 +80,18 @@ load_dotenv()  # reads .env at the repo root if present; no-op otherwise
 # gemini-2.5-flash-image is cheaper (~$0.039/image) but Google has it scheduled
 # to shut down 2026-10-02 — too close to the start of production to build on.
 # gemini-3.1-flash-image-preview (~$0.067/image) is the current, longer-lived
-# default. Swap to "gemini-3-pro-image-preview" for higher quality (4K, better
-# text rendering) at higher cost if this one's consistency isn't good enough.
+# default for diagram/environment shots, which don't need cross-shot identity
+# consistency.
 IMAGE_MODEL = "gemini-3.1-flash-image-preview"
+
+# Character shots use this model instead (research 2026-08-22, see module
+# docstring) — gemini-3-pro-image-preview is the tier Google specifically
+# documents multi-image ("up to 5") character-reference consistency support
+# on. Meaningfully pricier than the flash model above and 4K by default;
+# check current per-image pricing at ai.google.dev before a full batch, the
+# same way VIDEO_MODEL's cost is treated below. Worth the premium specifically
+# for the shot type where video 002's style actually broke.
+CHARACTER_MODEL = "gemini-3-pro-image-preview"
 
 # Veo video generation — significantly more expensive per generation than the
 # image model above. Clips come out ~8s by default; treat duration as fixed
@@ -78,18 +100,29 @@ VIDEO_MODEL = "veo-3.1-generate-preview"
 VIDEO_POLL_SECONDS = 10
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-CHARACTER_REF = REPO_ROOT / "system" / "05_visuals" / "character_reference" / "host_reference.png"
-STYLE_REF = REPO_ROOT / "system" / "05_visuals" / "character_reference" / "style_reference.png"
+CHARACTER_REF_DIR = REPO_ROOT / "system" / "05_visuals" / "character_reference"
+# Matches host_reference_front.png, host_reference_action.png,
+# host_reference_alarmed.png, etc. (see generate_character_reference.py) —
+# glob rather than hardcoding the set so adding a new pose/expression later
+# doesn't require a code change here too.
+CHARACTER_REF_GLOB = "host_reference_*.png"
+STYLE_REF = CHARACTER_REF_DIR / "style_reference.png"
+# Gemini 3 Pro Image documents support for up to 5 character-reference images
+# per generation (see module docstring) — cap here so an ever-growing
+# reference set doesn't silently exceed that and start erroring or getting
+# truncated by the API.
+MAX_CHARACTER_REFS = 5
 
 SHOT_BLOCK_RE = re.compile(r"^##\s*Shot\s+(\d+)\s*$", re.MULTILINE)
 PROMPT_LINE_RE = re.compile(r"^-\s*Prompt:\s*(.+)$", re.MULTILINE)
 TYPE_LINE_RE = re.compile(r"^-\s*Type:\s*(image|video)\s*$", re.MULTILINE | re.IGNORECASE)
+VISUAL_LINE_RE = re.compile(r"^-\s*Visual:\s*(character|diagram|environment)\s*$", re.MULTILINE | re.IGNORECASE)
 
 RATE_LIMIT_SECONDS = 2
 
 
-def parse_shot_list(path: Path) -> list[tuple[int, str, str]]:
-    """Returns a list of (shot_num, shot_type, prompt) tuples."""
+def parse_shot_list(path: Path) -> list[tuple[int, str, str, str]]:
+    """Returns a list of (shot_num, shot_type, visual_type, prompt) tuples."""
     text = path.read_text(encoding="utf-8")
     headers = list(SHOT_BLOCK_RE.finditer(text))
     shots = []
@@ -107,28 +140,46 @@ def parse_shot_list(path: Path) -> list[tuple[int, str, str]]:
         type_match = TYPE_LINE_RE.search(block)
         shot_type = type_match.group(1).lower() if type_match else "image"
 
-        shots.append((shot_num, shot_type, prompt_match.group(1).strip()))
+        # Defaults to "character" (the safer-to-over-attach-a-reference-on
+        # side) only if the field is missing entirely, which shouldn't
+        # happen on a real shot_list.md — every shot is supposed to be
+        # tagged. Missing entirely is itself worth a warning.
+        visual_match = VISUAL_LINE_RE.search(block)
+        if not visual_match:
+            print(f"  WARNING: Shot {shot_num:02d} has no '- Visual:' tag, assuming character")
+        visual_type = visual_match.group(1).lower() if visual_match else "character"
+
+        shots.append((shot_num, shot_type, visual_type, prompt_match.group(1).strip()))
     return shots
 
 
+def load_character_references() -> list[Image.Image]:
+    """The character reference SET (see generate_character_reference.py) —
+    optional, returns [] if the directory/files don't exist yet rather than
+    requiring the caller to build them first."""
+    if not CHARACTER_REF_DIR.exists():
+        return []
+    paths = sorted(CHARACTER_REF_DIR.glob(CHARACTER_REF_GLOB))[:MAX_CHARACTER_REFS]
+    return [Image.open(p) for p in paths]
+
+
 def load_reference(path: Path) -> Image.Image | None:
-    """Reference images are optional (see module docstring) — just return None
-    if not present, rather than requiring the caller to build one first."""
+    """Single optional reference image (used for the style reference) — just
+    return None if not present, rather than requiring the caller to build one
+    first."""
     if path.exists():
         return Image.open(path)
     return None
 
 
-def generate_image_shot(client, character_ref, style_ref, prompt: str, out_path: Path) -> None:
-    contents = []
-    if character_ref is not None:
-        contents.append(character_ref)
+def generate_image_shot(client, model: str, character_refs, style_ref, prompt: str, out_path: Path) -> None:
+    contents = list(character_refs)
     if style_ref is not None:
         contents.append(style_ref)
     contents.append(prompt)
 
     response = client.models.generate_content(
-        model=IMAGE_MODEL,
+        model=model,
         contents=contents,
         config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
     )
@@ -136,8 +187,10 @@ def generate_image_shot(client, character_ref, style_ref, prompt: str, out_path:
     image.save(out_path)
 
 
-def generate_video_shot(client, character_ref, style_ref, prompt: str, out_path: Path) -> None:
-    reference_images = [ref for ref in (character_ref, style_ref) if ref is not None]
+def generate_video_shot(client, character_refs, style_ref, prompt: str, out_path: Path) -> None:
+    reference_images = list(character_refs)
+    if style_ref is not None:
+        reference_images.append(style_ref)
 
     config_kwargs = {}
     if reference_images:
@@ -177,17 +230,23 @@ def main() -> None:
         print("root (GEMINI_API_KEY=...), or export it in your shell first.")
         sys.exit(1)
 
-    character_ref = load_reference(CHARACTER_REF)
+    character_refs = load_character_references()
     style_ref = load_reference(STYLE_REF)
-    if character_ref is None:
-        print("No character reference found (optional) — generating from prompt text alone.")
+    if not character_refs:
+        print("No character reference set found (optional) — character shots will")
+        print("generate from prompt text alone. Run generate_character_reference.py")
+        print("first if you want the consistency boost (see that script + this")
+        print("script's module docstring, research 2026-08-22).")
+    else:
+        print(f"Loaded {len(character_refs)} character reference image(s) — will attach")
+        print("to '- Visual: character' shots only, not diagram/environment shots.")
 
     client = genai.Client(api_key=api_key)
 
     shots = parse_shot_list(shot_list_path)
     print(f"Found {len(shots)} shots in {shot_list_path}")
 
-    for shot_num, shot_type, prompt in shots:
+    for shot_num, shot_type, visual_type, prompt in shots:
         ext = "mp4" if shot_type == "video" else "png"
         # Plain, non-zero-padded shot number + a short slug of the prompt text,
         # matching the real naming convention already used by manually-generated
@@ -197,16 +256,24 @@ def main() -> None:
         slug = re.sub(r"[^a-z0-9]+", "-", prompt.lower()).strip("-")[:50]
         existing = list(images_dir.glob(f"{shot_num}_*")) + list(images_dir.glob(f"{shot_num}.*"))
         if existing:
-            print(f"Shot {shot_num:02d} ({shot_type}): already generated, skipping")
+            print(f"Shot {shot_num:02d} ({shot_type}/{visual_type}): already generated, skipping")
             continue
         out_path = images_dir / f"{shot_num}_{slug}.{ext}"
 
-        print(f"Shot {shot_num:02d} ({shot_type}): generating ({prompt[:60]}...)")
+        # Only attach the character reference set on shots actually tagged
+        # "character" — attaching it to a diagram/environment shot risks
+        # forcing the host into a shot that isn't supposed to have one, the
+        # same reasoning that ruled out a single global reference for batch
+        # tools in the first place (see shot.md's "Primary method" section).
+        shot_character_refs = character_refs if visual_type == "character" else []
+        model = CHARACTER_MODEL if visual_type == "character" else IMAGE_MODEL
+
+        print(f"Shot {shot_num:02d} ({shot_type}/{visual_type}, model={model}): generating ({prompt[:60]}...)")
         try:
             if shot_type == "video":
-                generate_video_shot(client, character_ref, style_ref, prompt, out_path)
+                generate_video_shot(client, shot_character_refs, style_ref, prompt, out_path)
             else:
-                generate_image_shot(client, character_ref, style_ref, prompt, out_path)
+                generate_image_shot(client, model, shot_character_refs, style_ref, prompt, out_path)
             print(f"  saved -> {out_path}")
         except Exception as exc:  # noqa: BLE001 - report and continue to next shot
             print(f"  FAILED shot {shot_num:02d}: {exc}")

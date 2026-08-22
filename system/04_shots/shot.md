@@ -175,10 +175,12 @@ These three blocks match the established visual style from `system/shared/refere
 
 Flow's own manual UI has a feature called **Ingredients to Video** — attach up to 3 reference images (character/object/style) to a single generation and it maintains that subject's appearance across shots. This is a real, documented feature and can still be useful:
 
-- As a **personal visual-QA anchor** — build a character reference image once (manually in Flow, or via `system/05_visuals/generate_character_reference.py`) and eyeball generated shots against it by hand, without feeding it into every generation.
+- As a **personal visual-QA anchor** — build a character reference set once (manually in Flow, or via `system/05_visuals/generate_character_reference.py`) and eyeball generated shots against it by hand, without feeding it into every generation.
 - For **single-shot manual generation** in Flow's own UI, where you can attach it per-shot with full control (unlike bulk-batch tools) if you want extra consistency insurance on top of the self-contained prompt text.
 
-Not required for the primary workflow above. If built, save to `system/05_visuals/character_reference/host_reference.png` / `system/05_visuals/character_reference/style_reference.png`, generated once per channel, reused (optionally) across videos.
+**Research 2026-08-22 (see `character.md`'s "Research: the real reference-image mechanism" section for the full writeup)**: Flow's own documentation on this feature is specific that reference-photo *quality* directly determines how consistent the output is — a sharp, well-lit reference produces consistent characters, a blurry/low-res one doesn't. If using this path for character shots specifically (recommended over relying on text alone, given video 002's drift), attach the whole `host_reference_*.png` set, not just one image — a single front-facing portrait doesn't give the model anything to anchor an action pose or an expression change to. This is doubly true for the paid API path (`generate_visuals.py`), which now attaches this same set automatically and defaults character shots to `gemini-3-pro-image-preview` specifically because that model tier documents multi-image character-reference support as a first-class feature, not a bolt-on.
+
+Not required for the primary workflow above. If built, save to `system/05_visuals/character_reference/host_reference_front.png` / `host_reference_action.png` / `host_reference_alarmed.png` / `system/05_visuals/character_reference/style_reference.png`, generated once per channel, reused (optionally) across videos.
 
 ## Confirmed 2026-08-05: free vs. paid is about *which door*, not which model
 
@@ -265,8 +267,10 @@ Google Flow's own consumer app doesn't have a clean official automation API (thi
 3. `pip install -r system/05_visuals/requirements.txt`
 4. A character reference image is now **optional** for this script (see "Primary method" above) — if `system/05_visuals/character_reference/host_reference.png` doesn't exist, the script just skips attaching one rather than refusing to run.
 
-**Real cost (checked 2026-08-04):** no free tier on any of these models.
-- Images via `gemini-3.1-flash-image-preview` (the current default — see "Model choice" below for why): ~$0.067/image at default 1K resolution. At 98 shots that's roughly **$6.57** for a full video. Scales with shot count, so a denser shot list (recommended, see "Shot density" above) costs more via this paid path than it does via Flow's free path.
+**Real cost (checked 2026-08-04, model split updated 2026-08-22):** no free tier on any of these models.
+- Diagram/environment shots via `gemini-3.1-flash-image-preview`: ~$0.067/image at default 1K resolution.
+- **Character shots now default to `gemini-3-pro-image-preview` instead** (research 2026-08-22, see `character.md`'s "Research: the real reference-image mechanism" section — this tier is the one with documented multi-image character-reference support, which is the actual fix for video 002's style drift). This is meaningfully pricier and 4K by default — check current per-image pricing at `ai.google.dev` before running a full character-heavy batch; don't assume the ~$0.067 flash number above applies to these shots too.
+- Net effect: a video's total cost is no longer one flat per-shot number — it's (character shots × pro price) + (diagram/environment shots × flash price). Scales with shot count either way, so a denser shot list (recommended, see "Shot density" above) costs more via this paid path than it does via Flow's free path.
 - Video via `veo-3.1-generate-preview`: meaningfully more per clip than images — check current pricing at `ai.google.dev` before generating more than a couple, since it adds up fast if a whole video's worth of shots get switched to `Type: video`.
 
 **Required `shot_list.md` format** (the script parses this exactly — keep the field labels as-is):
@@ -288,7 +292,7 @@ python system/05_visuals/generate_visuals.py videos/001-toba-supervolcano
 ```
 Generates any shot in `shot_list.md` that doesn't already have a matching output file in `generate/generated/images/` (`.png` for images, `.mp4` for video — safe to re-run after adding new shots or fixing a bad generation, just delete the specific output file to force a regenerate). Video shots poll until the generation completes (typically 1-3 min per clip) before moving to the next shot.
 
-**Model choice:** images default to `gemini-3.1-flash-image-preview` (~$0.067/image). The cheaper `gemini-2.5-flash-image` (~$0.039/image) was deliberately avoided as the default despite costing less — Google has it scheduled to shut down 2026-10-02, too close to the start of production to build on. Swap to `gemini-3-pro-image-preview` in the script's `IMAGE_MODEL` constant for higher quality (4K, better text rendering) at higher cost if needed. Video defaults to `veo-3.1-generate-preview` (`VIDEO_MODEL` constant).
+**Model choice:** diagram/environment shots default to `gemini-3.1-flash-image-preview` (~$0.067/image, the script's `IMAGE_MODEL` constant). The cheaper `gemini-2.5-flash-image` (~$0.039/image) was deliberately avoided as the default despite costing less — Google has it scheduled to shut down 2026-10-02, too close to the start of production to build on. **Character shots (updated 2026-08-22) default to `gemini-3-pro-image-preview` instead** (the script's separate `CHARACTER_MODEL` constant) — not just "swap in for higher quality if needed" as this used to read, but the actual default now, since that tier's documented multi-image character-reference support is the real fix for video 002's style drift (see `character.md`'s research section). Video defaults to `veo-3.1-generate-preview` (`VIDEO_MODEL` constant).
 
 **Known issue (as of 2026-08-04):** there are live developer-forum reports of the video API's `reference_images` parameter throwing a 400 error despite being documented as supported. If video generation fails specifically on that argument, this is likely why — check the Gemini API forum for current status before assuming the script is broken.
 

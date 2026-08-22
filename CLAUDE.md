@@ -93,7 +93,14 @@ with no dedicated skill or agent wrapping them yet.
 - Video 002's character-style fix is blocked on a working `GEMINI_API_KEY`
   (current key returns 401) — the reference-image-attach approach
   (`system/04_shots/character.md`'s documented fallback) hasn't actually
-  been tested yet because of this.
+  been tested yet because of this. **The plan itself got a real upgrade
+  2026-08-22** (see that file's "Research: the real reference-image
+  mechanism" section) — not just "attach an image and hope": a 3-image
+  turnaround/expression reference set (`generate_character_reference.py`,
+  rewritten) plus `generate_visuals.py` now defaulting character shots to
+  `gemini-3-pro-image-preview`, the model tier that documents multi-image
+  character-reference consistency as a first-class feature. Still can't
+  verify any of it works until the key issue is resolved.
 - No automated way to get real per-shot/per-word narration timestamps —
   `06_voice` is fully manual (ElevenLabs web app), so `07_assembly` can only
   approximate duration sync by scaling, not retime against real speech. See
@@ -108,6 +115,8 @@ with no dedicated skill or agent wrapping them yet.
 - This file does not auto-update — update it directly as pipeline decisions
   get made or videos progress.
 - Next concrete step on video 002: get a working `GEMINI_API_KEY` (or
-  switch to the manual Flow reference-image path) and actually test whether
-  attaching `system/05_visuals/character_reference/host_reference.png`
-  fixes the stick-figure drift before spending more on a full re-render.
+  switch to the manual Flow reference-image path, attaching the full
+  `host_reference_*.png` set to Flow's "Ingredients" feature rather than
+  one image) and actually test whether the reference-set + pro-model
+  approach fixes the stick-figure drift before spending more on a full
+  re-render.
