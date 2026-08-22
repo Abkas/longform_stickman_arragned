@@ -3,12 +3,21 @@
 Orientation doc for future Claude Code sessions working on this channel.
 This folder is the **complete, standalone home** for the project — brain
 files, pipeline code, video content, and the orchestrator (skills/agents)
-config all live here together. It replaces an earlier two-folder split
-(`longform_stickman_arragned/` as thin config + a sibling
-`long-form-stickman-yt/` for content) — that split felt cramped/fragmented
-in practice, so everything was migrated into one folder on 2026-08-12. The
-old folder still exists on disk as an untouched, unused safety-net copy but
-should be treated as retired — work happens here now.
+config all live here together.
+
+**Read `pipeline.md` (project root) before working on any stage.** It's the
+authoritative description of the workflow's order, why it's shaped that
+way, and — as of 2026-08-13 — a real status table of what's automated vs.
+manual vs. still broken. This file is for conventions that span *multiple*
+stages; anything stage-specific belongs in that stage's own doc under
+`system/<NN_stage>/`, not here.
+
+**Structure note (2026-08-13):** everything pipeline-related now lives
+under `system/<NN_stage>/`, one numbered folder per stage, modeled on the
+`movie_auto_narration_fb` sister project's layout — nothing stage-specific
+lives loose at the top level anymore. This replaced the old flat
+`assets/brain/`, `assets/references/`, `assets/character/`, and `pipeline/`
+folders. See `pipeline.md`'s stage table for what moved where.
 
 ## What this channel is
 
@@ -19,104 +28,86 @@ monetized via ad-network/YPP revenue.
 
 ## Project & Persona (frozen, one-time — locked, not re-decided per video)
 
-- **Voice/tone** — `assets/brain/persona.md`: a three-way blend —
+- **Voice/tone** — `system/03_script/persona.md`: a three-way blend —
   Fireship's fast/sarcastic/self-aware energy as the default texture,
   OverSimplified's accuracy-first backbone underneath the jokes, Sam
   O'Nella's flat-deadpan delivery reserved specifically for genuinely dark
   or absurd facts. Locked 2026-08-04.
-- **Visual design** — `assets/brain/visuals/character.md`: a simple
-  stick figure, natural messy brown hair (specific locked wording after 3
-  real testing rounds — see the file for the full history of what went
-  wrong and why), flat pale skin, bold black outlines, no photorealism
-  anywhere. Locked 2026-08-09 (third pass).
+- **Visual design** — `system/04_shots/character.md`: a simple stick
+  figure, natural messy brown hair, flat pale skin, bold black outlines, no
+  photorealism anywhere. Locked 2026-08-09 (third pass) — **but see that
+  file's "Video 002 drift" section: video 002's actual generated batch
+  drifted off this design (full-bodied cartoon instead of a stick figure)
+  even after a 2026-08-13 wording fix, so "locked" describes the intended
+  design, not a guarantee every batch will hit it.**
 
-These two files are genuinely frozen — `script-writer`, `title-writer`, and
-`shot-list-builder` all read them, none of them edit them.
+These two files (plus `structure.md`, `title.md`, `voice.md`, `workflow.md`
+— the rest of the reference set under `system/`) are genuinely frozen —
+skills/agents read them, none of them edit them (see each skill/agent's own
+"What NOT to do" section).
 
-## Format reference
-
-- Script structure + title/hook checklist + worked-example teardown:
-  `assets/brain/structure.md`.
-- Title formula, data-derived from a full competitor catalog:
-  `assets/brain/title.md`.
-- Narration pacing + ElevenLabs technique: `assets/brain/voice.md`.
-- Visual generation workflow (shot density, self-contained prompts, style
-  suffixes): `assets/brain/visuals/workflow.md`.
-- Competitive research: `assets/references/channel_reports/` (deep-dive on
-  the primary benchmark channel + a wider niche-landscape survey),
-  `assets/references/transcripts/`, `assets/references/images/`.
-
-## Pipeline stages and who handles them
-
-| Stage | Handled by | Type | Reads |
-|---|---|---|---|
-| 1. Topic | `topic-scout` | skill | `structure.md`, `references/channel_reports/*` |
-| 2. Title | `title-writer` | skill | `title.md`, `structure.md`, `persona.md` |
-| 3. Script | `script-writer` | skill | `structure.md`, `persona.md`, `voice.md` |
-| 4. Shot list | `shot-list-builder` | agent | `visuals/workflow.md`, `visuals/character.md` |
-| 5. Visuals | `visual-generator` | agent | `visuals/workflow.md` |
-| 6. Voiceover (ElevenLabs) | manual — no specialist | — | `voice.md` for settings/prompt |
-| 7. Assembly (CapCut) | manual — no specialist | — | `structure.md`'s visual-style notes |
-
-All brain-file paths above are relative to `assets/brain/` **in this same
-folder** — no more cross-repo `../` paths anywhere in the specialist files.
+## Skills vs. agents
 
 **Skills** (`topic-scout`, `title-writer`, `script-writer`) run in one
 continuous conversation — stay talking to the same session as it works
 through each stage. **Agents** (`shot-list-builder`, `visual-generator`) run
 isolated — dispatched separately for bulky/mechanical/long-running work,
 reporting back a short result instead of filling the conversation.
+`07_assembly`'s `assemble.py` and `08_export` are currently manual/scripted
+with no dedicated skill or agent wrapping them yet.
 
 ## Folder structure
 
-- `videos/NNN-<slug>/` — one folder per video: `notes.md` (sourcing),
-  `title.md`, `script.md` (locked narration), `shot_list.md` (machine-
-  parseable scene breakdown), `generate/generate_image.md` +
-  `generate/generate_voice.md` (build artifacts, regenerated whenever
-  script/shot-list changes), `audio/` (ElevenLabs output), `generate/generated/`
-  (raw AI image/clip output), `testing/` (style-suffix iteration rounds),
-  `output/` (final render + thumbnail), `description.md` + `thumbnail_prompt.md`
-  (upload-ready metadata).
-- `assets/brain/` — frozen format/tone/narration/visual reference (see
-  above).
-- `assets/references/` — competitive research.
-- (No `assets/character/` folder currently — it was an empty placeholder
-  in the old project and got removed 2026-08-12. `assets/brain/visuals/workflow.md`'s
-  "Optional: reference-image" section describes an optional built-once
-  character reference image; if that path is ever used, create
-  `assets/character/host_reference.png` then.)
-- `pipeline/` — `generate_visuals.py` (per-video shot generation via Gemini
-  API), `generate_character_reference.py` (one-time character reference
-  generation), `requirements.txt`. **`pipeline/.venv/` is not committed and
-  not migrated from the old folder** — recreate it fresh:
-  `python3.11 -m venv pipeline/.venv && source pipeline/.venv/bin/activate
-  && pip install -r pipeline/requirements.txt`. Needs `GEMINI_API_KEY` in
-  `.env` (gitignored; copied over from the old folder, still valid).
-- `.claude/skills/`, `.claude/agents/` — the specialist files themselves.
+- `pipeline.md` — the pipeline's authoritative order + reasoning + status.
+- `system/<NN_stage>/` — one folder per pipeline stage, each with its own
+  doc and (where applicable) its own code/config. See `pipeline.md` for the
+  full stage list.
+- `system/shared/references/` — competitive research (channel deep-dives,
+  niche-landscape survey, transcripts, thumbnail images) used across
+  multiple stages, mainly `01_topic` and `03_script`.
+- `videos/NNN-<slug>/` — one folder per video, **unchanged by the 2026-08-13
+  restructure** (this is per-video runtime data, not pipeline definition —
+  same distinction the sister project draws with its own `data/`):
+  `notes.md` (sourcing), `title.md`, `script.md` (locked narration),
+  `shot_list.md` (machine-parseable scene breakdown), `generate/generate_image.md`
+  + `generate/generate_voice.md` (build artifacts, regenerated whenever
+  script/shot-list changes), `audio/` or `generate/generated/voice/`
+  (ElevenLabs output), `generate/generated/images/` (raw AI image/clip
+  output — see `pipeline.md`'s "Load-bearing formats" for the exact naming
+  convention `assemble.py` depends on), `generate/render_clips/` (per-shot
+  rendered clips, an `07_assembly` intermediate), `testing/` (style-suffix
+  iteration rounds), `output/` (final render + thumbnail), `description.md`
+  + `thumbnail_prompt.md` (upload-ready metadata, see `system/08_export/export.md`).
+- `.claude/skills/`, `.claude/agents/` — the specialist files themselves,
+  unchanged location (Claude Code expects them here).
 
 ## Video tracker
 
 | # | Slug | Status | Notes |
 |---|------|--------|-------|
-| 001 | toba-supervolcano | **Effectively upload-ready** | "How Did Ancient Humans Survive Earth's Worst Volcano?" — myth-busting angle. `script.md` locked (2,451 words, ~11.9-12 min). `shot_list.md`: 98 shots, verified word-for-word against the script. Style suffixes tuned across 8 test rounds (`testing/version_1`-`8`, see `testing/log.md`) — final locked wording in `assets/brain/visuals/character.md`. All 98 shots generated (`generate/generated/`), ElevenLabs VO generated (`audio/`), and a **finished render already exists**: `output/001-toba-supervolcano_v2.mp4` + `output/thumbnail.jpg`. `description.md` has a locked title, full sourced description, chapter timestamps, and tags — upload-ready. (This row was stale as of the migration — it previously said "next: run the batch, generate VO, assemble," despite all of that already being done. Fixed 2026-08-12.) `videos/001-toba-supervolcano.zip` also exists alongside the folder — looks like a possibly-stale backup archive, worth checking before relying on it. |
+| 001 | toba-supervolcano | **Upload-ready** | "How Did Ancient Humans Survive Earth's Worst Volcano?" — myth-busting angle. Script locked (2,451 words, ~12 min). 98 shots, all generated, VO generated, finished render exists (`output/001-toba-supervolcano_v2.mp4` + thumbnail). `description.md` locked. Treated as a frozen historical record during the 2026-08-13 restructure — a handful of exact-match paths got swept up in the global find/replace, but several already-stale pre-flatten paths from before that (e.g. `assets/brain/visuals/flow_workflow.md`, `assets/brain/visuals/character_design.md`) were deliberately left alone rather than fully repaired, since this is history, not a live doc. |
+| 002 | built-to-starve | **In progress, real problems found** | Script locked (2,561 words). `shot_list.md`: 111 shots — but its `- Duration:` fields are still computed at an assumed 207 WPM; the real ElevenLabs audio measured 166 WPM (24.6% overrun), not yet fixed at the source (see `pipeline.md`'s stage-04 status). First image batch (browser batch extension) came back 47% wrong (52/111 shots) from a queue-desync bug — root-caused and the *doc* gaps that let invented text through are fixed (`system/04_shots/character.md`/`workflow.md`), but a second regenerated batch still shows the character off the locked stick-figure design. A rough assembly exists (`output/002-built-to-starve_v1.mp4`, ~15:24) built from a mixed two-folder image source (`generate/image_v2/vdieo__0022222_v1` for shots 1-87, `generate/image_v2/asdf` for shots 88-111) via `assemble.py` — **not upload-ready**: character style still wrong, duration-sync is only a proportional approximation, motion ratio is low (5/111 shots). |
 
 ## Known gaps
 
-- No `002-<slug>` video started yet.
-- `assets/character/` has no reference image built yet (optional, per
-  `assets/brain/visuals/workflow.md`).
-- The `videos/001-toba-supervolcano.zip` archive's relationship to the real
-  `videos/001-toba-supervolcano/` folder hasn't been confirmed (stale
-  duplicate vs. intentional backup) — flagged during the 2026-08-12
-  migration, not yet resolved.
+- Video 002's character-style fix is blocked on a working `GEMINI_API_KEY`
+  (current key returns 401) — the reference-image-attach approach
+  (`system/04_shots/character.md`'s documented fallback) hasn't actually
+  been tested yet because of this.
+- No automated way to get real per-shot/per-word narration timestamps —
+  `06_voice` is fully manual (ElevenLabs web app), so `07_assembly` can only
+  approximate duration sync by scaling, not retime against real speech. See
+  `system/07_assembly/assembly.md`'s "Known limitation" section.
+- `videos/001-toba-supervolcano.zip` archive's relationship to the real
+  folder next to it still hasn't been confirmed (stale duplicate vs.
+  intentional backup) — flagged 2026-08-12, still unresolved.
+- No `003-<slug>` video started yet.
 
 ## Working notes
 
 - This file does not auto-update — update it directly as pipeline decisions
   get made or videos progress.
-- Next concrete step: pick a video 002 topic (`topic-scout`), avoiding the
-  "rain" angle — already crowded, see `assets/references/channel_reports/2026-08-04_niche_landscape.md`.
-
----
-
-_Migrated from the old two-folder split 2026-08-12. Last updated: 2026-08-12._
+- Next concrete step on video 002: get a working `GEMINI_API_KEY` (or
+  switch to the manual Flow reference-image path) and actually test whether
+  attaching `system/05_visuals/character_reference/host_reference.png`
+  fixes the stick-figure drift before spending more on a full re-render.

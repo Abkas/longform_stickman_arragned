@@ -5,11 +5,11 @@ shot_list.md, using the Gemini API directly.
 
 Prompts in shot_list.md are expected to be fully self-contained (character
 appearance / art style spelled out in the prompt text itself, per each shot's
-"- Visual:" tag — see assets/brain/visuals/flow_workflow.md's "Primary method"
+"- Visual:" tag — see system/04_shots/workflow.md's "Primary method"
 section) rather than relying on an attached reference image, since some batch
 tools only support one reference image for a whole batch and that risks forcing
 a character into diagram/environment shots that shouldn't have one. A character
-reference image at assets/character/host_reference.png is therefore OPTIONAL —
+reference image at system/05_visuals/character_reference/host_reference.png is therefore OPTIONAL —
 if present, it gets attached as an extra consistency aid; if absent, generation
 just proceeds on the prompt text alone.
 
@@ -20,7 +20,7 @@ through the API, and Flow itself has no official automation API.
 Each shot in shot_list.md can specify "- Type: image" or "- Type: video"
 (defaults to image if omitted). Video generation is meaningfully more expensive
 and slower (polls for completion, ~1-3 min per clip) than image generation —
-per assets/brain/visuals/flow_workflow.md's recommendation, most shots should be
+per system/04_shots/workflow.md's recommendation, most shots should be
 images with a small number of video clips reserved for key dynamic beats.
 
 KNOWN ISSUE (as of 2026-08-04): there are live reports of the video API's
@@ -30,18 +30,25 @@ reference_images argument, check the Gemini API developer forum for current
 status — this may need to fall back to a strongly-worded text description of
 the character instead of an attached reference image until Google fixes it.
 
-Neither image nor video generation is free — see assets/brain/visuals/flow_workflow.md
+Neither image nor video generation is free — see system/04_shots/workflow.md
 for current per-shot cost estimates. Not huge for one video (a few dollars),
 but not zero either.
 
 Usage:
     Put GEMINI_API_KEY=... in a .env file at the repo root (see .env.example),
     or export it in your shell instead if you prefer.
-    pip install -r pipeline/requirements.txt
-    python pipeline/generate_visuals.py videos/001-toba-supervolcano
+    pip install -r system/05_visuals/requirements.txt
+    python system/05_visuals/generate_visuals.py videos/001-toba-supervolcano
 
-Re-running is safe: shots that already have an output file in visuals/ are
-skipped. Delete a specific output file to force that one shot to regenerate.
+Re-running is safe: shots that already have an output file in
+generate/generated/images/ are skipped. Delete a specific output file to
+force that one shot to regenerate.
+
+Output location fixed 2026-08-13: this used to write to <video_dir>/visuals/,
+which never matched the real convention actually used in practice (see
+video 001's real files, all under generate/generated/images/) -- this was a
+latent bug, never actually caught because video 001 was generated manually
+through Flow, not through this script.
 """
 
 import os
@@ -152,17 +159,17 @@ def generate_video_shot(client, character_ref, style_ref, prompt: str, out_path:
 
 def main() -> None:
     if len(sys.argv) != 2:
-        print("Usage: python pipeline/generate_visuals.py videos/<slug>")
+        print("Usage: python system/05_visuals/generate_visuals.py videos/<slug>")
         sys.exit(1)
 
     video_dir = Path(sys.argv[1])
     shot_list_path = video_dir / "shot_list.md"
-    visuals_dir = video_dir / "visuals"
+    images_dir = video_dir / "generate" / "generated" / "images"
 
     if not shot_list_path.exists():
         print(f"ERROR: no shot_list.md at {shot_list_path}")
         sys.exit(1)
-    visuals_dir.mkdir(parents=True, exist_ok=True)
+    images_dir.mkdir(parents=True, exist_ok=True)
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -182,10 +189,17 @@ def main() -> None:
 
     for shot_num, shot_type, prompt in shots:
         ext = "mp4" if shot_type == "video" else "png"
-        out_path = visuals_dir / f"{shot_num:02d}.{ext}"
-        if out_path.exists():
+        # Plain, non-zero-padded shot number + a short slug of the prompt text,
+        # matching the real naming convention already used by manually-generated
+        # (Flow) shots -- e.g. "4_standing-in-front-of-a-vending-machine...jpeg".
+        # assemble.py's image lookup globs "{shot_num}_*"/"{shot_num}.*", so this
+        # naming isn't just cosmetic -- a zero-padded name wouldn't be found.
+        slug = re.sub(r"[^a-z0-9]+", "-", prompt.lower()).strip("-")[:50]
+        existing = list(images_dir.glob(f"{shot_num}_*")) + list(images_dir.glob(f"{shot_num}.*"))
+        if existing:
             print(f"Shot {shot_num:02d} ({shot_type}): already generated, skipping")
             continue
+        out_path = images_dir / f"{shot_num}_{slug}.{ext}"
 
         print(f"Shot {shot_num:02d} ({shot_type}): generating ({prompt[:60]}...)")
         try:

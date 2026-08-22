@@ -1,6 +1,6 @@
 # Video 001 — title, description, tags (upload-ready)
 
-Status: **locked title** (from `title.md`), **new: description + hashtags + tags**, built to match Ink Explainer's real house format (`assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md` — `▸` bullet + paper title in quotes + year/journal + DOI, minimal 4-6 broad tags, category "People & Blogs").
+Status: **locked title** (from `title.md`), **new: description + hashtags + tags**, built to match Ink Explainer's real house format (`system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md` — `▸` bullet + paper title in quotes + year/journal + DOI, minimal 4-6 broad tags, category "People & Blogs").
 
 ## Title
 

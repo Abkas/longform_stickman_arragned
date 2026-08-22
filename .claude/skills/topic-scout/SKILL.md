@@ -13,22 +13,22 @@ they're living references that can be revised.
 
 ## Read first, in this order
 
-1. `assets/brain/structure.md` — read
+1. `system/03_script/structure.md` — read
    "Channel aim" and "Workflow for a new video" step 1. The core move: some
    *forced constraint* (weather, isolation, scarcity, disaster) ancient/
    historical people had to survive or adapt to.
-2. `assets/references/channel_reports/2026-08-04_niche_landscape.md`
+2. `system/shared/references/channel_reports/2026-08-04_niche_landscape.md`
    — confirms which angles are already saturated by the copycat cluster
    (Ink Explainer, Deep Epoch, Before Civilization, Stick Plot, Brook
    Explains, Mack Explains, Before The Clock). The "rain" angle is
    confirmed taken — don't propose it or a thin variant of it.
-3. `assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`
+3. `system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`
    — the full catalog/performance pattern of the primary channel being
    replicated, for a sense of what's already been done well.
 4. `CLAUDE.md` — read the "Video tracker" table so
    a new pitch doesn't collide with something already published or in
    progress.
-5. `assets/brain/title.md` — skim the
+5. `system/02_title/title.md` — skim the
    "non-negotiable" line at the bottom: title/topic must read as a
    sustained-or-existential threat, not a mundane occurrence. Topic and
    title are coupled — a topic that can't clear this bar isn't worth
@@ -66,10 +66,10 @@ they're living references that can be revised.
 ## What NOT to do
 
 - Do not edit `CLAUDE.md`'s video tracker table or
-  `assets/brain/title.md`'s track record table — those stay
+  `system/02_title/title.md`'s track record table — those stay
   user-maintained. Just tell the user what got locked so they can update
   them.
-- Do not edit any file under `assets/brain/` — those are frozen references,
+- Do not edit any file under `system/` (the reference docs, not per-video output) — those are frozen references,
   read-only from this skill's perspective.
 - Don't invent sources. A thin, honestly-sourced topic beats a
   well-populated but fabricated one — this channel's whole credibility

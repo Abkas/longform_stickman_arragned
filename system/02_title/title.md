@@ -1,6 +1,6 @@
 # Title strategy — what actually gets attention in this niche
 
-Built 2026-08-04 from real title-vs-views data (all 12 Ink Explainer videos — full catalog in `assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`), not guesswork. Reusable for every video, not just one — apply this formula whenever drafting a new title.
+Built 2026-08-04 from real title-vs-views data (all 12 Ink Explainer videos — full catalog in `system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`), not guesswork. Reusable for every video, not just one — apply this formula whenever drafting a new title.
 
 ## The data, sorted by performance
 

@@ -29,7 +29,7 @@ Computed directly from the two downloaded transcripts' caption timestamps (not e
 - Rain video: 2,413 words over 698 seconds = **~207 WPM**
 - Guns video: 2,736 words over 769 seconds = **~213 WPM**
 
-This is notably brisk — typical documentary narration runs 150-160 WPM, calm storytelling narration runs 130-150 WPM. Ink Explainer reads roughly **35-40% faster than baseline documentary pace**. This is consistent with the short-sentence, quick-signpost writing style already documented in the deep-dive (`assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`) — the pace is a product of the writing, not just a TTS speed setting.
+This is notably brisk — typical documentary narration runs 150-160 WPM, calm storytelling narration runs 130-150 WPM. Ink Explainer reads roughly **35-40% faster than baseline documentary pace**. This is consistent with the short-sentence, quick-signpost writing style already documented in the deep-dive (`system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`) — the pace is a product of the writing, not just a TTS speed setting.
 
 **Target for our own scripts: ~200-215 WPM equivalent pacing**, achieved primarily by keeping sentences short and signposting frequently (as documented in the narration-style section of the deep-dive), not by just speeding up playback.
 

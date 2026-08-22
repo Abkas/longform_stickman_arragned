@@ -1,6 +1,6 @@
 # Tone/persona options — researched 2026-08-04
 
-This started as a decision doc, not a locked reference — everything else in `assets/brain/` (script structure, narration pacing target, ElevenLabs technique) was built around Ink Explainer's dramatic-but-earnest tone. The options below range from "same tone, faster" to "same visual style, fully comedic," and picking one changes the script formula, not just the voice performance. Status: **Locked 2026-08-04 — see "Decision log" below for the chosen blend.** (This status line previously said "not decided yet" even after the Decision log below documented a firm choice on the same date — fixed 2026-08-12 to stop the file contradicting itself.)
+This started as a decision doc, not a locked reference — everything else in `system/` (script structure, narration pacing target, ElevenLabs technique) was built around Ink Explainer's dramatic-but-earnest tone. The options below range from "same tone, faster" to "same visual style, fully comedic," and picking one changes the script formula, not just the voice performance. Status: **Locked 2026-08-04 — see "Decision log" below for the chosen blend.** (This status line previously said "not decided yet" even after the Decision log below documented a firm choice on the same date — fixed 2026-08-12 to stop the file contradicting itself.)
 
 ## Four reference archetypes
 
@@ -38,9 +38,9 @@ Two real axes, not one:
 2. **What kind of comedy, if any** — dry/understated (CGP Grey) vs. meme/deadpan-fast (Fireship) vs. warm-and-slightly-humorous (OverSimplified) vs. dark/deadpan (Sam O'Nella).
 
 Whichever direction gets picked changes real downstream artifacts:
-- **Script formula** (`assets/brain/structure.md`) — the 5-part dramatic-immersive structure would need actual comedic beats written in, not just tonal polish, if leaning toward OverSimplified/Sam O'Nella.
-- **Narration voice direction** (`assets/brain/voice.md`) — currently says "not theatrical, calm, MrBallen-style restraint," which holds for CGP Grey-style but not for a Sam O'Nella-style deadpan-comedic read.
-- **Title strategy** (`assets/brain/title.md`) — currently data-derived from Ink Explainer's straight-question titles; a comedic channel might title differently (worth re-deriving from OverSimplified/Sam O'Nella's own titles if that direction gets picked).
+- **Script formula** (`system/03_script/structure.md`) — the 5-part dramatic-immersive structure would need actual comedic beats written in, not just tonal polish, if leaning toward OverSimplified/Sam O'Nella.
+- **Narration voice direction** (`system/06_voice/voice.md`) — currently says "not theatrical, calm, MrBallen-style restraint," which holds for CGP Grey-style but not for a Sam O'Nella-style deadpan-comedic read.
+- **Title strategy** (`system/02_title/title.md`) — currently data-derived from Ink Explainer's straight-question titles; a comedic channel might title differently (worth re-deriving from OverSimplified/Sam O'Nella's own titles if that direction gets picked).
 
 ## Decision log
 
@@ -49,13 +49,13 @@ Whichever direction gets picked changes real downstream artifacts:
 _Correction to the earlier version of this doc: it added a "never sarcastic or dismissive" guardrail, inherited from OverSimplified's own description rather than anything actually requested. That's removed — sarcasm and genZ-coded humor are an explicit, wanted part of the tone._
 
 - **Base energy/pacing (Fireship): fast, sarcastic, meme-literate, self-aware.** Constant light wit and sarcastic asides running through the narration by default, not reserved for special moments — dry jokes about absurd historical decisions, self-aware quips, genZ-coded phrasing where it fits naturally. This is the default texture of the writing, not a garnish.
-- **Clarity/accuracy backbone (OverSimplified): still plain, direct-address, and historically accurate underneath the jokes.** Sarcasm and humor sit on top of real research-backed content (citations still required, per `assets/brain/structure.md`'s sourcing convention) — the comedy doesn't replace the substance, same lesson as OverSimplified even though the "never sarcastic" boundary itself is dropped.
+- **Clarity/accuracy backbone (OverSimplified): still plain, direct-address, and historically accurate underneath the jokes.** Sarcasm and humor sit on top of real research-backed content (citations still required, per `system/03_script/structure.md`'s sourcing convention) — the comedy doesn't replace the substance, same lesson as OverSimplified even though the "never sarcastic" boundary itself is dropped.
 - **Deadpan dark-fact technique (Sam O'Nella): kept as-is.** When a genuinely dark or absurd fact comes up, state it completely flat — no dramatizing, no dwelling — and let the gap between casual delivery and grim content land the joke. This still stacks fine on top of a generally sarcastic/witty base register.
 
 Net effect: a narrator who's consistently witty, sarcastic, and fun (Fireship) — not just occasionally light (OverSimplified alone) — who still gets the facts right and cites sources (OverSimplified's substance-first discipline), and who goes completely flat/deadpan specifically on the darkest beats for contrast (Sam O'Nella).
 
 ### What this changes downstream
 
-- **Script formula** (`assets/brain/structure.md`): structure stays the same (hook -> pillar -> escalating pillars -> cultural payoff -> reframe). Sarcastic/witty asides get woven throughout the writing, not just at pillar-escalation beats; the deadpan-flat treatment is reserved specifically for the darkest/most absurd facts as a contrast beat.
-- **Narration voice** (`assets/brain/voice.md`): pacing target (~200-215 WPM) and "not theatrical" vocal-delivery guidance both still hold — sarcasm/wit lives in the writing and word choice, not in a big dramatic vocal performance, same mechanism as how Fireship and CGP Grey both stay dry/flat vocally while being funny/witty through content. Mark the deadpan dark-fact beats explicitly in `script.md` for ElevenLabs tagging (`[flatly]`, `[deadpan]`); everything else can carry a slightly more playful/sarcastic tag where natural (`[amused]`, `[wry]`).
-- **Title strategy** (`assets/brain/title.md`): no change needed yet — still data-derived from Ink Explainer's titles. Worth revisiting once we have our own published titles, since a sarcastic/genZ-humor channel might title more playfully than Ink Explainer's straight factual-question format.
+- **Script formula** (`system/03_script/structure.md`): structure stays the same (hook -> pillar -> escalating pillars -> cultural payoff -> reframe). Sarcastic/witty asides get woven throughout the writing, not just at pillar-escalation beats; the deadpan-flat treatment is reserved specifically for the darkest/most absurd facts as a contrast beat.
+- **Narration voice** (`system/06_voice/voice.md`): pacing target (~200-215 WPM) and "not theatrical" vocal-delivery guidance both still hold — sarcasm/wit lives in the writing and word choice, not in a big dramatic vocal performance, same mechanism as how Fireship and CGP Grey both stay dry/flat vocally while being funny/witty through content. Mark the deadpan dark-fact beats explicitly in `script.md` for ElevenLabs tagging (`[flatly]`, `[deadpan]`); everything else can carry a slightly more playful/sarcastic tag where natural (`[amused]`, `[wry]`).
+- **Title strategy** (`system/02_title/title.md`): no change needed yet — still data-derived from Ink Explainer's titles. Worth revisiting once we have our own published titles, since a sarcastic/genZ-humor channel might title more playfully than Ink Explainer's straight factual-question format.

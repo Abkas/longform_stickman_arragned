@@ -1,6 +1,6 @@
 # Video 001 — shot list
 
-Status: **locked, rebuilt 2026-08-05 on a verified programmatic basis.** Machine-parsed by `pipeline/generate_visuals.py` — keep the `## Shot NN` headers and `- Prompt:` field exactly as formatted (see `assets/brain/visuals/flow_workflow.md` for the format spec).
+Status: **locked, rebuilt 2026-08-05 on a verified programmatic basis.** Machine-parsed by `system/05_visuals/generate_visuals.py` — keep the `## Shot NN` headers and `- Prompt:` field exactly as formatted (see `assets/brain/visuals/flow_workflow.md` for the format spec).
 
 **How this was built (see `assets/brain/visuals/flow_workflow.md` "Shot density" section for the full research):** researched actual practice for this exact genre (AI-generated faceless explainer channels) rather than generic video-editing advice — the common default is **one image per sentence**. `script.md` was split into its 129 real sentences programmatically, then sentences under 8 words were merged forward into the next one (so no shot is an unusably short fragment) — landing at **98 shots**. Every duration below is `words_in_that_shot / 205 WPM`, computed directly from the actual sentence text, not estimated by hand — total 717s (11.96 min), matching `script.md` exactly, word for word, with no gaps or overlaps. This replaces the earlier hand-built 39-shot and 90-shot versions, both of which had manual arithmetic that drifted from the real script.
 

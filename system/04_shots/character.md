@@ -1,6 +1,6 @@
-# Character design — locked, revised 2026-08-09 (third pass, natural hair)
+# Character design — locked, revised 2026-08-13 (fourth pass — no-invented-text + linework-vs-body-proportions clauses, see "Video 002 drift" below; hair itself unchanged since the 2026-08-09 third pass)
 
-Channel-wide reference, not video-specific — applies to every future video's host character, same as the other `assets/brain/` docs.
+Channel-wide reference, not video-specific — applies to every future video's host character, same as the other `system/` reference docs.
 
 ## The problem (found by comparing real generated output)
 
@@ -36,9 +36,38 @@ Dropped "voluminous," "loops and curls," and "unkempt tousled shape extending ou
 
 Also keeping the flat-skin-color reinforcement from the first attempt (that part wasn't the problem, no reason to drop it).
 
-## Locked character suffix (replaces the version_7 attempt, applies to all 46 `character`-tagged shots)
+## Locked character suffix (revised 2026-08-13 — see "Video 002 drift" section below; supersedes the version_7-era text, applies to every `character`-tagged shot)
 
-> Art style: flat 2D cartoon webcomic illustration, like Cyanide & Happiness, OverSimplified, or Sam O'Nella Academy — this is a STRICT requirement. ABSOLUTELY NOT photorealistic, NOT a digital painting, NOT concept art, NOT a photograph, no realistic textures or lighting anywhere in the image. Character: a simple stick figure with a round flat pale head, two small dot eyes, a short line mouth, thin uniform-width black-outlined stick limbs and torso with no muscles or anatomical shading, wearing simple flat-colored brown or leopard-print fabric. Hair: natural messy brown hair, medium length and volume, a bit tousled and uneven like it was never combed, a few strands falling loosely over the forehead, solid flat medium-brown color with no gradient, shading, or highlights. Skin: completely flat, solid, uniform pale color with zero gradient, shading, or highlights anywhere on the face or body. Bold, thick, uniform black outlines on every element in the frame — the character AND the background must be drawn in the exact same flat, simplified cartoon style, with solid or simply-shaded flat colors. The background is a simplified cartoon illustration, not a realistic painted scene or photo — same rule as the character: flat colors, bold outlines, no photorealistic texture or lighting.
+> Art style: flat 2D cartoon webcomic illustration, like Cyanide & Happiness, OverSimplified, or Sam O'Nella Academy — this is a STRICT requirement. ABSOLUTELY NOT photorealistic, NOT a digital painting, NOT concept art, NOT a photograph, no realistic textures or lighting anywhere in the image. These named references describe the flat 2D linework/illustration technique only — NOT body proportions; the character's body must follow the stick-limb description below exactly, even where that diverges from those comics' own fuller, clothed-body house style. Character: a simple stick figure with a round flat pale head, two small dot eyes, a short line mouth, thin uniform-width black-outlined stick limbs and torso with no muscles or anatomical shading, wearing simple flat-colored brown or leopard-print fabric. Hair: natural messy brown hair, medium length and volume, a bit tousled and uneven like it was never combed, a few strands falling loosely over the forehead, solid flat medium-brown color with no gradient, shading, or highlights. Skin: completely flat, solid, uniform pale color with zero gradient, shading, or highlights anywhere on the face or body. Bold, thick, uniform black outlines on every element in the frame — the character AND the background must be drawn in the exact same flat, simplified cartoon style, with solid or simply-shaded flat colors. The background is a simplified cartoon illustration, not a realistic painted scene or photo — same rule as the character: flat colors, bold outlines, no photorealistic texture or lighting. Do not add any speech bubbles, captions, sound-effect text (e.g. "CRUNCH", "SLURP"), on-screen dialogue, or any lettering anywhere in the frame unless it is explicitly described in this shot's own prompt text — no invented text of any kind, repeat: none.
+
+## Video 002 drift (found + fixed 2026-08-13)
+
+A full-batch audit of video 002's 111 generated images (documented in that
+video's own review) surfaced two failures in this suffix that video 001
+didn't have, both now fixed in the locked text above:
+
+1. **Invented on-screen text.** ~8 of video 002's `character`-type shots
+   added speech bubbles/sound-effect text/captions that weren't in the
+   prompt at all (e.g. a fabricated "*CRUNCH! SMACK! CHOMP! SLURP!*"
+   bubble). Diffing against the `diagram`/`environment` suffixes in
+   `workflow.md` found the actual gap: both of those suffixes already
+   explicitly forbid inventing on-screen text — this one never did. Fixed
+   by adding the same prohibition here.
+2. **Full-bodied character instead of a stick figure.** Most/all of video
+   002's character shots rendered a fully-bodied Cyanide & Happiness-style
+   cartoon (visible torso mass, hands, shoulders) rather than the locked
+   thin-stick-limb design — on the *exact same suffix wording* video 001
+   used to produce a genuine stick figure (confirmed: video 001's shot 1
+   prompt was 1,388 characters, video 002's was 1,395 — not a truncation
+   issue). Most likely cause: real tension in the wording itself between
+   "look like Cyanide & Happiness" (whose actual house style is
+   fuller-bodied) and "thin stick limbs" — video 001 resolved it one way,
+   video 002 resolved it the other way, on identical text. Fixed by adding
+   the explicit "references are linework-technique only, not body
+   proportions" sentence above. **This may not fully close the gap** — per
+   "Worth knowing" below, text-only prompting has a real consistency
+   ceiling; if drift shows up again on the next batch, stop iterating on
+   wording and switch to attaching a real reference image instead.
 
 ## Worth knowing: text-only has a ceiling on consistency
 

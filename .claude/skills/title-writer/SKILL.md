@@ -11,7 +11,7 @@ every run** — don't rely on memory from a past session.
 
 ## Read first
 
-1. `assets/brain/title.md` — the full
+1. `system/02_title/title.md` — the full
    thing. It's derived from real title-vs-views data across the primary
    benchmark channel's catalog, not guesswork. Pay specific attention to:
    - The working formula:
@@ -24,12 +24,12 @@ every run** — don't rely on memory from a past session.
    - Question-form titles outperform statement-form; statement-form only
      works paired with a strong evocative adjective ("Real Reason,"
      "Disturbing Ways").
-2. `assets/brain/structure.md` — the
+2. `system/03_script/structure.md` — the
    "Title/hook checklist" section (5 points: concrete crisis not vague
    topic, implied payoff/reveal, groundable in real evidence, thumbnail
    reads as the genre at a glance, second-person/crisis framing not
    third-person lecture).
-3. `assets/brain/persona.md` — read the "Decision log" at the bottom.
+3. `system/03_script/persona.md` — read the "Decision log" at the bottom.
    It explicitly flags that this channel's sarcastic/genZ-humor tone hasn't
    been re-derived into its own title strategy yet (the current formula is
    still purely Ink Explainer's straight-question style).
@@ -54,7 +54,7 @@ every run** — don't rely on memory from a past session.
 
 ## What NOT to do
 
-- Don't write to `assets/brain/title.md`'s "Track record" table —
+- Don't write to `system/02_title/title.md`'s "Track record" table —
   that stays user-maintained. Just report the locked title back clearly so
   the user can log it themselves.
 - Don't touch any other frozen brain file.

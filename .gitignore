@@ -14,12 +14,12 @@ client_secret*.json
 # Python cruft
 __pycache__/
 *.pyc
-pipeline/.venv/
+system/05_visuals/.venv/
 
 # generated/rendered video-production media — large binaries, never posted
 # to GitHub. Scoped to videos/ specifically (not a blanket *.jpg/*.png rule)
-# so the small, legitimate reference images under assets/references/images/
-# and any future assets/character/ reference image stay tracked.
+# so the small, legitimate reference images under system/shared/references/images/
+# and system/05_visuals/character_reference/ stay tracked.
 videos/**/*.jpg
 videos/**/*.jpeg
 videos/**/*.png
@@ -29,5 +29,11 @@ videos/**/*.mp4
 videos/**/*.mov
 videos/**/*.webm
 videos/**/*.mp3
+videos/**/*.mpeg
+videos/**/*.m4a
 videos/**/*.wav
 videos/*.zip
+
+# build intermediates (assemble.py) — disposable, safe to delete/re-render,
+# and the concat-list file inside it holds machine-specific absolute paths
+videos/**/render_clips/

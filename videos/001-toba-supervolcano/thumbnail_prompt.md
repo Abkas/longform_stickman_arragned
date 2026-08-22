@@ -1,6 +1,6 @@
 # Video 001 — thumbnail generation prompt
 
-Status: **new.** Built from the locked channel character suffix (`assets/brain/visuals/character_design.md`) + the thumbnail style notes in the Ink Explainer deep-dive (`assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`: character prominent and close, dramatic painted background, 1-3 word bold text alternating white/yellow, blue-grey-for-danger vs warm-orange-for-safe palette). Same generation pipeline as the shot images (Gemini/Flow) — paste the prompt straight in, no reference image required.
+Status: **new.** Built from the locked channel character suffix (`assets/brain/visuals/character_design.md`) + the thumbnail style notes in the Ink Explainer deep-dive (`system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`: character prominent and close, dramatic painted background, 1-3 word bold text alternating white/yellow, blue-grey-for-danger vs warm-orange-for-safe palette). Same generation pipeline as the shot images (Gemini/Flow) — paste the prompt straight in, no reference image required.
 
 ## Concept
 
@@ -44,4 +44,4 @@ Place in the clean upper-left space the prompt already reserves. Keep it to one 
 
 ## Next
 
-Generate both concepts via the existing pipeline (`pipeline/generate_visuals.py` or manual Flow), pick the stronger read at actual thumbnail scale (view it shrunk down, not full-size), then add text in the editor and drop the final into `output/`.
+Generate both concepts via the existing pipeline (`system/05_visuals/generate_visuals.py` or manual Flow), pick the stronger read at actual thumbnail scale (view it shrunk down, not full-size), then add text in the editor and drop the final into `output/`.

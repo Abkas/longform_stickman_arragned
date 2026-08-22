@@ -43,7 +43,7 @@ The [2026-08-04 niche landscape report](2026-08-04_niche_landscape.md) concluded
 
 Caveat: "Guns" is the most recent upload (9 days old at time of pull) — its low view count may partly reflect not having matured yet, not just weak topic/execution. Don't over-read it as a definitive flop.
 
-## Visual style (confirmed from 5 real thumbnails, saved to `assets/references/images/inkexplainer96_*`)
+## Visual style (confirmed from 5 real thumbnails, saved to `system/shared/references/images/inkexplainer96_*`)
 
 - **Recurring mascot character:** a specific messy-brown-haired stick character (round pale head, dot/line eyes, thin black-outlined limbs, leopard-print fur clothing) reappears across multiple thumbnails — this is deliberate brand-recognition, not a one-off design. Worth designing an equivalent recurring "host" character for our own channel.
 - **Linework:** clean, fairly thick black outlines on characters, cel-shaded flat coloring — crisper and more polished than the copycat-cluster thumbnails saved earlier (compare `inkexplainer96_rainedallweek_thumb.jpg` side-by-side with `deepepoch_rainedallweek_thumb.jpg` in the same folder).
@@ -53,7 +53,7 @@ Caveat: "Guns" is the most recent upload (9 days old at time of pull) — its lo
 
 ## Narration style — the core of what to replicate
 
-Pulled full transcripts (auto-captions) for two videos: the top hit (**Rain**, 1.07M views) and the weakest recent one (**Guns**, 16K views) — saved to `assets/references/transcripts/`. Style is highly consistent across both despite the performance gap, which means this is a deliberate house style, not something that varies video-to-video.
+Pulled full transcripts (auto-captions) for two videos: the top hit (**Rain**, 1.07M views) and the weakest recent one (**Guns**, 16K views) — saved to `system/shared/references/transcripts/`. Style is highly consistent across both despite the performance gap, which means this is a deliberate house style, not something that varies video-to-video.
 
 **1. Cold open — either immersive second-person or a present-tense shock stat**
 - Rain: *"Imagine you haven't eaten in 2 days. You know exactly where the herd is. You tracked it yesterday... And then it starts raining."*
@@ -82,7 +82,7 @@ Lots of sentences start with "So," "But," "And," "Because" — this reads as spo
 - Guns opens "somewhere on Earth in the next 2 minutes, a human being is going to be shot," and closes by literally repeating that exact line — a hard callback, not just a thematic echo.
 
 **8. A consistent narrative thesis: "nobody planned this" / accidental causality**
-Both scripts frame their entire subject as an unintended consequence chain: rain-forced downtime "accidentally" seeded human culture; alchemists searching for immortality "accidentally" invented weapons. This isn't just a hook gimmick — it's the throughline that gives a fact-dump a single argument to hang on. Worth deciding a version of this for our own scripts (the existing formula in `assets/brain/format/structure.md`'s "reframe/upside twist" step is this same device).
+Both scripts frame their entire subject as an unintended consequence chain: rain-forced downtime "accidentally" seeded human culture; alchemists searching for immortality "accidentally" invented weapons. This isn't just a hook gimmick — it's the throughline that gives a fact-dump a single argument to hang on. Worth deciding a version of this for our own scripts (the existing formula in `system/03_script/structure.md`'s "reframe/upside twist" step is this same device).
 
 **9. Mid-roll sponsor placement pattern (Guns video only — the channel does take sponsors)**
 The hook question ("So how does that happen?") is deliberately left unresolved, then immediately cut to a ~90-second sponsor read (World of Warships), then resolved right after ("All right, back to the question that started all of this."). Classic hook-then-monetize-then-resolve structure — relevant once our own channel is far enough along to take sponsors.
@@ -97,7 +97,7 @@ Every major claim gets a `▸` bullet with a short label, the paper's actual tit
 
 ## Script-structure formula: confirmed, not just a one-video fluke
 
-The 5-part structure already captured in `assets/brain/format/structure.md` (hook → foundational pillar → escalating middle pillars → cultural/social payoff → reframe) was originally distilled from the Rain video alone. The Guns transcript follows the same shape (crisis-framed cold open → foundational "what is gunpowder" pillar → escalating technical pillars (fire lance → hand cannon → matchlock → wheellock → flintlock → cartridge) → the "so here's the full picture" payoff → closing reframe). **This is a validated, channel-wide pattern, not a coincidence of one script** — safe to treat as the actual house formula rather than a one-off.
+The 5-part structure already captured in `system/03_script/structure.md` (hook → foundational pillar → escalating middle pillars → cultural/social payoff → reframe) was originally distilled from the Rain video alone. The Guns transcript follows the same shape (crisis-framed cold open → foundational "what is gunpowder" pillar → escalating technical pillars (fire lance → hand cannon → matchlock → wheellock → flintlock → cartridge) → the "so here's the full picture" payoff → closing reframe). **This is a validated, channel-wide pattern, not a coincidence of one script** — safe to treat as the actual house formula rather than a one-off.
 
 ## What to concretely replicate
 
@@ -114,6 +114,6 @@ The 5-part structure already captured in `assets/brain/format/structure.md` (hoo
 
 ## Saved artifacts
 
-- Thumbnails: `assets/references/images/inkexplainer96_rainedallweek_thumb.jpg`, `_firstgun_thumb.jpg`, `_drinksallday_thumb.jpg`, `_whyus_thumb.jpg`, `_cozyinside_thumb.jpg`
-- Full transcripts: `assets/references/transcripts/inkexplainer96_rainedallweek_transcript.txt`, `_firstgun_transcript.txt`
+- Thumbnails: `system/shared/references/images/inkexplainer96_rainedallweek_thumb.jpg`, `_firstgun_thumb.jpg`, `_drinksallday_thumb.jpg`, `_whyus_thumb.jpg`, `_cozyinside_thumb.jpg`
+- Full transcripts: `system/shared/references/transcripts/inkexplainer96_rainedallweek_transcript.txt`, `_firstgun_transcript.txt`
 - Underlying catalog/metadata pulled via `yt-dlp` (channel listing + per-video JSON for all 12 videos) — not committed to the repo (raw JSON, low reuse value), but every number in the table above was read directly from it on 2026-08-04.

@@ -15,30 +15,41 @@ relative to this same folder, no cross-repo references anymore.
 
 ## Read first, in full
 
-1. `assets/brain/visuals/workflow.md` —
+1. `system/04_shots/workflow.md` —
    specifically:
    - "Shot density": one shot per sentence, split the script into real
      sentences programmatically, merge any sentence under 8 words forward
      into the next one so nothing is an unusably short fragment. Do this
      with a script, not by hand — hand-computed durations across 90+ shots
      have drifted before in this project.
+   - **"Pacing fix: cap the long end too" (added 2026-08-12, read this
+     closely)** — video 001's actual render had long static holds where an
+     overlong sentence got mapped to one unchanging image. Cap shot duration
+     around ~10-12s and split longer sentences into two shots with genuinely
+     different framing/action instead of one long static hold. Every
+     `character`-type prompt needs a specific action/posture, rotated
+     shot-to-shot so consecutive character shots don't repeat the same pose.
    - "Required `shot_list.md` format": the exact block format
      (`## Shot NNN` / `- Narration:` / `- Duration:` / `- Type:` /
      `- Visual:` / `- Prompt:`). Keep field labels *exactly* as documented
      — a downstream script parses them literally. `- Type:` defaults to
-     `image` if omitted; only mark `- Type: video` for a shot that
-     genuinely needs a short dynamic clip, and when unsure, default to
-     `image` and note it as a "candidate for video" in your final report
-     rather than deciding unilaterally.
-2. **`assets/brain/visuals/character.md`** — use this file's
+     `image` if omitted for `diagram`/`environment` shots, where a static
+     hold is fine. For `character`-type shots with short (<8-word) narration
+     that implies physical motion or a reaction, *prefer* `- Type: video`
+     over silently merging the beat away — per the pacing-fix section above,
+     this is the specific failure mode being corrected, not just an
+     occasional exception. Note every `video`-typed shot clearly in your
+     final report either way, since it affects cost/generation time.
+2. **`system/04_shots/character.md`** — use this file's
    "Locked character suffix" block for every `character`-tagged shot. This
    is the current, correct wording (final pass, natural-hair fix).
-   `visuals/workflow.md` used to also quote an *older*, stale character-suffix
-   example from before that fix — that was removed 2026-08-12 and replaced
-   with a pointer back to this file, so there's now only one place this
-   text can live.
-3. Use `visuals/workflow.md`'s `diagram` and `environment` suffix blocks
-   verbatim — those two weren't touched by the character-design revision.
+   `system/04_shots/workflow.md` used to also quote an *older*, stale
+   character-suffix example from before that fix — that was removed
+   2026-08-12 and replaced with a pointer back to this file, so there's now
+   only one place this text can live.
+3. Use `system/04_shots/workflow.md`'s `diagram` and `environment` suffix
+   blocks verbatim — those two weren't touched by the character-design
+   revision.
 4. Skim an existing video's `shot_list.md` (e.g.
    `videos/001-toba-supervolcano/shot_list.md`) as
    a concrete reference for what a correct, real shot list looks like.
@@ -61,12 +72,15 @@ relative to this same folder, no cross-repo references anymore.
    traps like this.
 5. Compute `- Duration:` per shot from its word count against the target
    WPM (check `script.md`'s own header for a stated pace; default to
-   ~207 WPM per `assets/brain/voice.md` if not stated). Total duration should
+   ~207 WPM per `system/06_voice/voice.md` if not stated). Total duration should
    land close to the script's intended runtime.
 6. Write `videos/NNN-slug/shot_list.md`.
 7. Programmatically (not by hand) extract:
    - `videos/NNN-slug/generate/generate_image.md`
-     — every shot's full `- Prompt:` line, one per line, nothing else.
+     — every shot's full `- Prompt:` line, one per line, **separated by a
+     blank line (paragraph break) between each prompt** for readability —
+     fixed 2026-08-12, video 002's build had them packed with no separation.
+     Nothing else in the file (no numbering, no narration/duration).
    - `videos/NNN-slug/generate/generate_voice.md`
      — the script's clean narration text, `*[tag]*` converted to `[tag]`,
      paragraph breaks kept, no other markdown.
@@ -75,7 +89,8 @@ relative to this same folder, no cross-repo references anymore.
 
 - Don't edit `script.md` — if something in it seems to need a change,
   report that back instead of altering the locked script yourself.
-- Don't edit any `assets/brain/*.md` file.
+- Don't edit any `system/*/*.md` reference doc (`workflow.md`, `character.md`,
+  `structure.md`, `persona.md`, `voice.md`, `title.md`).
 - Don't guess at `- Type: video` shots — default to `image`, flag
   candidates in your report.
 

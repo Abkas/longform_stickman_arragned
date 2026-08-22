@@ -1,6 +1,6 @@
 # Video 001 — sourcing notes
 
-Status: **locked.** Sources verified 2026-08-04 via direct search (not inferred). Mapped to the 5-part structure from `assets/brain/format/structure.md`, citation format matches Ink Explainer's own description convention (see `assets/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`).
+Status: **locked.** Sources verified 2026-08-04 via direct search (not inferred). Mapped to the 5-part structure from `assets/brain/format/structure.md`, citation format matches Ink Explainer's own description convention (see `system/shared/references/channel_reports/2026-08-04_inkexplainer96_deep_dive.md`).
 
 ## Narrative arc for this video
 

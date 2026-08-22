@@ -2,8 +2,8 @@
 """
 Generate the channel's character and style reference images via the Gemini API.
 
-OPTIONAL, not required for the primary workflow (see assets/brain/visuals/
-flow_workflow.md's "Primary method" section) — shot_list.md prompts are now
+OPTIONAL, not required for the primary workflow (see
+system/04_shots/workflow.md's "Primary method" section) — shot_list.md prompts are now
 fully self-contained (style described in the prompt text itself), so no
 reference image is needed to generate on-style shots. This script is still
 useful as a personal visual-QA anchor (eyeball generated shots against it by
@@ -16,8 +16,8 @@ Not free — roughly $0.07/image at default resolution with the model below, so
 Usage:
     Put GEMINI_API_KEY=... in a .env file at the repo root (see .env.example),
     or export it in your shell instead if you prefer.
-    pip install -r pipeline/requirements.txt
-    python pipeline/generate_character_reference.py
+    pip install -r system/05_visuals/requirements.txt
+    python system/05_visuals/generate_character_reference.py
 
 Re-running regenerates both images by default (character design is worth
 iterating on). Pass --character-only or --style-only to regenerate just one.
@@ -102,7 +102,7 @@ def main() -> None:
         print("Generating style reference...")
         generate_image(client, STYLE_PROMPT, OUT_DIR / "style_reference.png")
 
-    print("\nReview both images against assets/references/images/inkexplainer96_*")
+    print("\nReview both images against system/shared/references/images/inkexplainer96_*")
     print("for style match. Re-run this script (or edit the prompts above and")
     print("re-run) if either doesn't land — cheap and fast to iterate on since")
     print("these are single images, not a full shot-list batch.")

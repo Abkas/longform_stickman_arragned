@@ -28,7 +28,7 @@ All six thumbnails above share the same recognizable look — this is the real "
 - **Lighting:** dramatic — dark stormy exteriors, warm firelight interiors, blue-grey rain palettes.
 - **Thumbnail text:** short (2-4 words), bold sans-serif, yellow or white, almost always phrased as a question ("NO FIRE?", "RAIN OR DEATH?", "STILL RAINING?", "YEARS OF RAIN?").
 
-Reference images saved to `assets/references/images/` (filenames match the table above).
+Reference images saved to `system/shared/references/images/` (filenames match the table above).
 
 ## Other channels in/near this niche (broader search, not part of the rain-video cluster)
 
@@ -49,6 +49,6 @@ Reference images saved to `assets/references/images/` (filenames match the table
 
 ## Takeaway for our channel
 
-- The "ancient humans forced indoors by weather" angle from the original benchmark teardown is **already saturated** by at least six near-simultaneous clones. Don't script this exact angle — pick a different "forced constraint" scenario (the format itself, per `assets/brain/format/structure.md`, generalizes to any forced downtime: drought, isolation, famine, volcanic winter, etc.) or a genuinely different evidence set.
+- The "ancient humans forced indoors by weather" angle from the original benchmark teardown is **already saturated** by at least six near-simultaneous clones. Don't script this exact angle — pick a different "forced constraint" scenario (the format itself, per `system/03_script/structure.md`, generalizes to any forced downtime: drought, isolation, famine, volcanic winter, etc.) or a genuinely different evidence set.
 - The stickman visual style is real and consistent across independent channels (see thumbnails) — safe to use as our own art-direction reference, it's clearly a working convention for this content type, not just one channel's quirk.
 - Thumbnail convention worth copying: short bold question-phrase text (2-4 words, yellow/white) over a dramatic painted scene.
