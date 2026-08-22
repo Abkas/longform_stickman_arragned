@@ -20,6 +20,45 @@ In `videos/NNN-slug/` (siblings of `output/<slug>_v1.mp4`):
 - **`output/thumbnail.jpg`** — the generated thumbnail itself, sitting
   alongside the final render.
 
+## Thumbnail checklist (locked 2026-08-22, CTR research, sourced)
+
+`thumbnail_prompt.md` and the final `output/thumbnail.jpg` should hit all
+of these, not just "reads as the genre at a glance" (`structure.md`'s
+checklist item 4 points here for the specifics):
+
+1. **≤4 words of on-thumbnail text.** Text-heavy thumbnails measurably
+   underperform minimal-text ones — this tightens the existing "1-3 word
+   bold text" convention inherited from the Ink Explainer deep-dive, now
+   with a hard ceiling, not just a stylistic default.
+2. **The character's face carries a strong, legible emotion** — surprise,
+   alarm, or curiosity read best; a neutral/calm expression is a wasted
+   opportunity on a thumbnail specifically (calm/content expressions are
+   fine and correct for in-video shots, this is thumbnail-only).
+3. **Thumbnail and title must not repeat the same information.** The pair
+   works as a unit: the thumbnail opens a curiosity gap (a striking image,
+   an unresolved "before" without the "after"), the title gives just enough
+   context to make the click worth it. Showing the payoff or the full
+   premise in both wastes the pairing — pick which one carries the "what,"
+   and let the other carry the "why should I care."
+4. Character prominent and close, dramatic background, warm/cool palette
+   split for safe-vs-danger beats — unchanged from the existing convention.
+
+## Compliance note: AI-content disclosure (checked 2026-08-22)
+
+YouTube's "Altered or Synthetic Content" policy (full enforcement since
+January 2026) only requires a disclosure label for content realistic
+enough to be mistaken for actual footage of a real person/place/event.
+Confirmed directly against the policy's own stated exemptions: obviously
+animated/cartoon content and AI-generated voiceover are both explicitly
+**exempt** — this channel's entire output (stickman animation + ElevenLabs
+narration) doesn't trigger the requirement. Nothing to add to the upload
+flow for this. The actual monetization risk for this genre is the
+separate "inauthentic content" policy (mass-produced, templated,
+near-identical videos) — not AI use itself — which is exactly what the
+per-video sourcing rigor already locked in `system/03_script/structure.md`
+(real, citable sites/studies/dates per video) defends against. Keep doing
+that; don't start treating AI disclosure as a to-do, it isn't one.
+
 ## What's not built yet
 
 No automated spec-check or per-platform export-variant step (the sister

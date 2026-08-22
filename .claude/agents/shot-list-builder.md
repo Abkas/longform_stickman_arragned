@@ -17,11 +17,15 @@ relative to this same folder, no cross-repo references anymore.
 
 1. `system/04_shots/shot.md` —
    specifically:
-   - "Shot density": one shot per sentence, split the script into real
-     sentences programmatically, merge any sentence under 8 words forward
-     into the next one so nothing is an unusably short fragment. Do this
-     with a script, not by hand — hand-computed durations across 90+ shots
-     have drifted before in this project.
+   - **Read "Shot density v2" first, not v1** — v2 (max density + itemized-
+     list override, ~8-12 words/shot baseline, one shot per enumerated
+     item at ~1.5-2.5s each, 4-word merge threshold) is locked for **video
+     003 onward**. v1 ("one shot per sentence," 8-word merge threshold) is
+     kept in the same file as history for videos 001/002 only — don't
+     apply it to a new video by habit just because it's still documented.
+     If you're ever unsure which applies, check the video number: 001/002
+     stay on v1 (already built, not being rebuilt), everything from 003 on
+     uses v2.
    - **"Pacing fix: cap the long end too" (added 2026-08-12, read this
      closely)** — video 001's actual render had long static holds where an
      overlong sentence got mapped to one unchanging image. Cap shot duration
@@ -29,6 +33,8 @@ relative to this same folder, no cross-repo references anymore.
      different framing/action instead of one long static hold. Every
      `character`-type prompt needs a specific action/posture, rotated
      shot-to-shot so consecutive character shots don't repeat the same pose.
+     (This rule's own "<8-word" numbers are v1-era too — see shot.md's
+     "Reconciling with v2" note for the updated threshold.)
    - "Required `shot_list.md` format": the exact block format
      (`## Shot NNN` / `- Narration:` / `- Duration:` / `- Type:` /
      `- Visual:` / `- Prompt:`). Keep field labels *exactly* as documented
@@ -53,13 +59,25 @@ relative to this same folder, no cross-repo references anymore.
 4. Skim an existing video's `shot_list.md` (e.g.
    `videos/001-toba-supervolcano/shot_list.md`) as
    a concrete reference for what a correct, real shot list looks like.
+5. **`system/03_script/structure.md`'s hook sub-rule (locked 2026-08-22)** —
+   for shots covering the hook section (roughly the first ~1:30 of
+   narration), write an explicit on-screen text/label directly into the
+   `- Prompt:` (e.g. "on-screen text reads '[key phrase]'"), even on
+   `character`-type shots that wouldn't normally carry text. This is
+   deliberate, prompt-specified text — not the invented-text failure mode
+   `character.md` guards against, which is about the *model* adding text
+   nobody asked for. Retention research backs this: many viewers watch
+   muted, and on-screen text during the hook measurably holds more watch
+   time than narration alone.
 
 ## What to do
 
 1. Read the target video's locked `videos/NNN-slug/script.md`.
-2. Split it into real sentences programmatically (write and run a small
-   script via Bash — don't do this by hand). Merge any sub-8-word sentence
-   forward into the next one.
+2. Split it into real shots programmatically (write and run a small script
+   via Bash — don't do this by hand), following whichever density model
+   applies per item 1 above (v1: sentences, 8-word merge threshold, videos
+   001/002 only — v2: clauses + itemized-list override, 4-word merge
+   threshold, video 003 onward).
 3. Verify the concatenated shot narration matches `script.md` word-for-word
    before writing anything downstream. If it doesn't match, fix the split
    logic — don't proceed with a mismatch.
