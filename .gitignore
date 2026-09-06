@@ -11,6 +11,13 @@ credentials.json
 token.json
 client_secret*.json
 
+# persistent browser profile(s) for the Flow automation driver — each
+# holds a real logged-in Google session (cookies), never commit. Default
+# single-account profile plus any named multi-account profiles created via
+# `flow_record_session.py --account <name>`.
+system/05_visuals/.flow_profile/
+system/05_visuals/.flow_profile_*/
+
 # Python cruft
 __pycache__/
 *.pyc
@@ -37,3 +44,7 @@ videos/*.zip
 # build intermediates (assemble.py) — disposable, safe to delete/re-render,
 # and the concat-list file inside it holds machine-specific absolute paths
 videos/**/render_clips/
+
+# flow_batch_driver.py's failure-diagnosis screenshots — grows unbounded
+# on every run, purely for local debugging, never posted to GitHub
+system/05_visuals/.flow_debug/
