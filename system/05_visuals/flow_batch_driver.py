@@ -455,12 +455,27 @@ class StalledOut(Exception):
     than escalating further (never touches the login/profile)."""
 
 
+LAUNCH_DEBUG_DIR = Path(__file__).parent / ".flow_debug"
+
+
 def launch_session(p, account: Account):
     """(Re)launch the persistent browser context for `account` and run
     setup_session. Used for the initial launch, the same-account
     stall-recovery restart, AND switching to a different account, so all
     three never drift out of sync. Never deletes/resets a profile --
-    whichever account's profile_dir this points at stays logged in."""
+    whichever account's profile_dir this points at stays logged in.
+
+    Confirmed from real runs: waiting for the "Settings trigger" button to
+    render here is NOT reliably a fixed delay -- observed anywhere from
+    "already there" to a flat 45s Playwright timeout on the SAME project,
+    with the button confirmed present and visible seconds later on a
+    completely separate manual check both times. Whatever's actually
+    causing that (a client-side route re-render invalidating an in-flight
+    wait_for, a slow/variable server-side render, something else) isn't
+    pinned down yet -- this retries once via a full page reload (which
+    resolves a stuck SPA route in similar cases) rather than assuming it's
+    a one-off, and saves a screenshot before giving up so a repeat of this
+    doesn't need an ad-hoc diagnostic script to see what's on screen."""
     context = p.chromium.launch_persistent_context(
         user_data_dir=str(account.profile_dir),
         headless=False,
@@ -468,7 +483,32 @@ def launch_session(p, account: Account):
     )
     page = context.pages[0] if context.pages else context.new_page()
     page.goto(account.project_url)
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(3000)  # initial settle before even checking
+
+    settings_trigger = page.get_by_label("Settings trigger")
+    try:
+        settings_trigger.wait_for(state="visible", timeout=30_000)
+    except PWTimeoutError:
+        page.reload()
+        page.wait_for_timeout(3000)
+        try:
+            settings_trigger.wait_for(state="visible", timeout=30_000)
+        except PWTimeoutError:
+            LAUNCH_DEBUG_DIR.mkdir(exist_ok=True)
+            shot_path = LAUNCH_DEBUG_DIR / f"launch-failed_{account.name}.png"
+            try:
+                page.screenshot(path=str(shot_path), full_page=False)
+            except Exception:
+                pass
+            raise TimeoutError(
+                f"'Settings trigger' never appeared on account "
+                f"'{account.name}' (project {account.project_url}) even "
+                f"after a reload -- see {shot_path}. Not a shot failure, "
+                "the whole session never got going; check the project URL "
+                "and that this account is actually logged in."
+            )
+
+    page.wait_for_timeout(500)  # let the rest of the toolbar settle too
     setup_session(page)
     return context, page
 
@@ -672,53 +712,74 @@ def main() -> None:
               f"{[a.name for a in accounts]}")
 
     stalled_out = False
-    with sync_playwright() as p:
-        st = EscalationState(p, accounts)
+    launch_failed = None  # set to the exception if a session launch fails and can't be caught by the ladder
+    failures = []
+    try:
+        with sync_playwright() as p:
+            st = EscalationState(p, accounts)
 
-        failures = []
-        try:
-            for i, (n, prompt, dest) in enumerate(todo):
-                print(f"\n[{i+1}/{len(todo)}] Shot {n}: {prompt[:80]}{'...' if len(prompt) > 80 else ''} "
-                      f"[{st.account.name}]")
-                try:
-                    generate_and_download(st.page, n, prompt, dest)
-                    print(f"  -> saved {dest.name}")
-                    st.on_success()
-                except FlowBlockedError as e:
-                    # Flow itself blocked this account (quota exhausted,
-                    # an "unusual activity" flag, etc.) -- retrying or
-                    # restarting THIS account can't possibly help, so
-                    # skip straight to switching accounts instead of
-                    # wasting a restart+cooldown on it first.
-                    print(f"  !! BLOCKED: {e}")
-                    failures.append(n)
-                    if len(failures) >= 3 and len(failures) == i + 1:
-                        print("\n3 failures in a row right at the start -- something's "
-                              "likely broken (selector mismatch, not logged in, wrong "
-                              "project URL, or every account already blocked). "
-                              "Stopping rather than burning your quota.")
-                        break
-                    st.on_failure(n, force_switch=True, reason=str(e))
-                except (PWTimeoutError, TimeoutError, Exception) as e:
-                    print(f"  !! FAILED: {e}")
-                    failures.append(n)
+            try:
+                for i, (n, prompt, dest) in enumerate(todo):
+                    print(f"\n[{i+1}/{len(todo)}] Shot {n}: {prompt[:80]}{'...' if len(prompt) > 80 else ''} "
+                          f"[{st.account.name}]")
+                    try:
+                        generate_and_download(st.page, n, prompt, dest)
+                        print(f"  -> saved {dest.name}")
+                        st.on_success()
+                    except FlowBlockedError as e:
+                        # Flow itself blocked this account (quota exhausted,
+                        # an "unusual activity" flag, etc.) -- retrying or
+                        # restarting THIS account can't possibly help, so
+                        # skip straight to switching accounts instead of
+                        # wasting a restart+cooldown on it first.
+                        print(f"  !! BLOCKED: {e}")
+                        failures.append(n)
+                        if len(failures) >= 3 and len(failures) == i + 1:
+                            print("\n3 failures in a row right at the start -- something's "
+                                  "likely broken (selector mismatch, not logged in, wrong "
+                                  "project URL, or every account already blocked). "
+                                  "Stopping rather than burning your quota.")
+                            break
+                        st.on_failure(n, force_switch=True, reason=str(e))
+                    except (PWTimeoutError, TimeoutError, Exception) as e:
+                        print(f"  !! FAILED: {e}")
+                        failures.append(n)
 
-                    if len(failures) >= 3 and len(failures) == i + 1:
-                        print("\n3 failures in a row right at the start -- something's "
-                              "likely broken (selector mismatch, not logged in, wrong "
-                              "project URL). Stopping rather than burning your quota.")
-                        break
+                        if len(failures) >= 3 and len(failures) == i + 1:
+                            print("\n3 failures in a row right at the start -- something's "
+                                  "likely broken (selector mismatch, not logged in, wrong "
+                                  "project URL). Stopping rather than burning your quota.")
+                            break
 
-                    st.on_failure(n)
+                        st.on_failure(n)
 
-                if i < len(todo) - 1:
-                    delay = random.uniform(MIN_DELAY_S, MAX_DELAY_S)
-                    print(f"  waiting {delay:.0f}s before next shot...")
-                    st.page.wait_for_timeout(int(delay * 1000))
-        except StalledOut:
-            stalled_out = True
-        else:
-            st.close()
+                    if i < len(todo) - 1:
+                        delay = random.uniform(MIN_DELAY_S, MAX_DELAY_S)
+                        print(f"  waiting {delay:.0f}s before next shot...")
+                        st.page.wait_for_timeout(int(delay * 1000))
+            except StalledOut:
+                stalled_out = True
+            else:
+                st.close()
+    except Exception as e:
+        # A browser/session (re)launch failed somewhere -- either the
+        # very first one (nothing ran yet) or one triggered mid-run by
+        # the escalation ladder itself (restart/switch/round-cooldown).
+        # Either way this is NOT one shot failing, it's the whole run
+        # unable to continue -- report it plainly instead of a raw
+        # traceback, and stop rather than guess at further recovery.
+        launch_failed = e
+
+    if launch_failed:
+        print(f"\nStopped: couldn't get a working browser session going: "
+              f"{launch_failed}\n"
+              "Re-run the same command -- shots already downloaded are "
+              "skipped, so it resumes from where it left off. If this "
+              "keeps happening, check the account/project by hand.")
+        if failures:
+            print(f"Shots that did complete or fail before this: succeeded "
+                  f"{len(todo) - len(failures)}, failed {failures}")
+        return
 
     if stalled_out:
         print(
