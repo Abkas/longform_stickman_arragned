@@ -284,6 +284,53 @@ def _grid_tile_count(page) -> int:
     ])
 
 
+# Specific reasons seen so far in Flow's "Failed / not charged" error
+# card. Both confirmed from real runs: "reached your usage limit" (quota
+# exhausted) and "unusual activity" (an account-level abuse/bot flag --
+# seen after two live test batches ran back-to-back with no real pacing
+# gap between them, exactly the tight-cadence pattern the MIN/MAX_DELAY_S
+# pacing below exists to avoid). There may be others Flow shows that
+# haven't been seen yet -- _flow_error_card_text() below doesn't require
+# matching one of these by name, so an unrecognized reason still gets
+# caught rather than silently falling through to the generic "prompt
+# never submitted" misdiagnosis.
+KNOWN_FLOW_ERROR_REASONS = ("reached your usage limit", "unusual activity")
+
+
+def _flow_error_card_text(page):
+    """Returns a short reason string if a Flow "Failed / not charged"
+    error card is currently showing (quota exhausted, an "unusual
+    activity" abuse flag, or anything else Flow rejects a generation
+    with), else None. Anchored on "You have not been charged for this
+    generation." -- confirmed common to every such card seen so far --
+    rather than requiring one specific reason, so a new/different Flow
+    error message still gets caught instead of silently falling through.
+    Confirmed from real runs: this error card does NOT have a 'More
+    options' button like a real result tile does, so the tile-count
+    checks this file otherwise relies on never see it -- without this
+    check, ANY such Flow-side rejection gets misreported as "the prompt
+    never submitted" and burns 3 blind retries that can't possibly help
+    before finally failing anyway."""
+    try:
+        if page.get_by_text("You have not been charged for this generation.", exact=False).count() == 0:
+            return None
+        for reason in KNOWN_FLOW_ERROR_REASONS:
+            if page.get_by_text(reason, exact=False).count() > 0:
+                return reason
+        return "unrecognized Flow error"
+    except Exception:
+        return None
+
+
+class FlowBlockedError(Exception):
+    """Raised when Flow itself reports a "Failed / not charged" error
+    for the CURRENT account (quota exhausted, an "unusual activity" flag,
+    etc.), as opposed to a generic stall/timeout. Handled specially in
+    main(): retrying or restarting this same account can't help, so it
+    short-circuits straight to switching accounts instead of wasting a
+    restart+cooldown first."""
+
+
 def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> None:
     more_options_before = _grid_tile_count(page)
 
@@ -305,6 +352,14 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
             if _grid_tile_count(page) > more_options_before:
                 submitted = True
                 break
+            reason = _flow_error_card_text(page)
+            if reason:
+                _debug_shot(page, shot_num, "flow-error")
+                raise FlowBlockedError(
+                    f"Flow reported an error for shot {shot_num} ({reason}, "
+                    "not charged) -- this account is blocked for now "
+                    f"(see {DEBUG_DIR}/shot{shot_num}_flow-error.png)"
+                )
             page.wait_for_timeout(1000)
         if submitted:
             break
@@ -323,6 +378,14 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
     while time.monotonic() < deadline:
         if _grid_tile_count(page) > more_options_before:
             break
+        reason = _flow_error_card_text(page)
+        if reason:
+            _debug_shot(page, shot_num, "flow-error")
+            raise FlowBlockedError(
+                f"Flow reported an error for shot {shot_num} ({reason}, "
+                "not charged) -- this account is blocked for now "
+                f"(see {DEBUG_DIR}/shot{shot_num}_flow-error.png)"
+            )
         page.wait_for_timeout(2000)
     else:
         _debug_shot(page, shot_num, "no-new-result")
@@ -408,6 +471,116 @@ def launch_session(p, account: Account):
     page.wait_for_timeout(3000)
     setup_session(page)
     return context, page
+
+
+class EscalationState:
+    """Owns the stall-recovery ladder's mutable state (current account,
+    consecutive-failure counters, live browser context/page) and applies
+    one step of escalation per failed shot. See this file's module
+    docstring for the full 5-level ladder this implements."""
+
+    def __init__(self, p, accounts: list) -> None:
+        self.p = p
+        self.accounts = accounts
+        self.account_idx = 0
+        self.account_fail_streak = 0        # consecutive failures on the CURRENT account
+        self.already_cooled_down_this_account = False  # level-2 fires once per account attempt
+        self.accounts_tried_this_round = 0  # accounts switched away from, still failing
+        self.rounds_exhausted = 0           # full rotations where every account failed
+        self.context, self.page = launch_session(p, self.account)
+
+    @property
+    def account(self) -> Account:
+        return self.accounts[self.account_idx]
+
+    def on_success(self) -> None:
+        self.account_fail_streak = 0
+        self.already_cooled_down_this_account = False
+        self.accounts_tried_this_round = 0
+        self.rounds_exhausted = 0
+
+    def _relaunch(self, account_idx=None) -> None:
+        if account_idx is not None:
+            self.account_idx = account_idx
+        self.context.close()
+        self.context, self.page = launch_session(self.p, self.account)
+
+    def on_failure(self, shot_num: int, force_switch: bool = False, reason: Optional[str] = None) -> None:
+        """Apply one step of the ladder for a shot that just failed.
+        force_switch=True (used for FlowBlockedError) skips straight to
+        the switch-account step -- restarting/cooling down the SAME
+        account can't help when Flow itself blocked it (quota exhausted,
+        an "unusual activity" flag, etc. -- see `reason`).
+        Raises StalledOut if the whole run should stop."""
+        if force_switch:
+            self.account_fail_streak = max(self.account_fail_streak, SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES)
+        else:
+            self.account_fail_streak += 1
+
+        if self.account_fail_streak >= SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES:
+            self.accounts_tried_this_round += 1
+
+            if self.accounts_tried_this_round >= len(self.accounts):
+                self.rounds_exhausted += 1
+                if self.rounds_exhausted >= MAX_ROUNDS_BEFORE_STOP:
+                    print(f"\n  Every account failed, {self.rounds_exhausted} "
+                          "full rotation(s) in a row (with a cooldown "
+                          "between each) -- stopping cleanly (still "
+                          "logged in everywhere) rather than looping "
+                          "further unattended.")
+                    raise StalledOut()
+                print(f"\n  All {len(self.accounts)} account(s) failed this "
+                      f"round -- backing off {ROUND_COOLDOWN_S // 60} min "
+                      "in case this is a rate-limit/\"unusual activity\" "
+                      f"flag, then retrying from {self.accounts[0].name}.")
+                self.context.close()
+                time.sleep(ROUND_COOLDOWN_S)
+                self.accounts_tried_this_round = 0
+                self.account_fail_streak = 0
+                self.already_cooled_down_this_account = False
+                self.account_idx = 0
+                self.context, self.page = launch_session(self.p, self.account)
+            else:
+                next_idx = (self.account_idx + 1) % len(self.accounts)
+                why = reason or (
+                    f"{SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES} downloads in a "
+                    "row didn't come through, restart and cooldown included")
+                print(f"\n  {why} -- switching to account "
+                      f"'{self.accounts[next_idx].name}' for the rest of "
+                      f"this run (shot {shot_num} itself stays a gap -- a later "
+                      f"pass over this same range picks it back up, since "
+                      f"anything already downloaded gets skipped).")
+                self.account_fail_streak = 0
+                self.already_cooled_down_this_account = False
+                self._relaunch(next_idx)
+
+        elif self.account_fail_streak >= COOLDOWN_AFTER_CONSECUTIVE_FAILURES and not self.already_cooled_down_this_account:
+            print(f"\n  {self.account_fail_streak} downloads in a row didn't "
+                  f"come through, restart included -- backing off "
+                  f"{ACCOUNT_COOLDOWN_S // 60} min on account "
+                  f"'{self.account.name}' in case it's just "
+                  f"this one that's rate-limited, then continuing with "
+                  f"the next shot on it (shot {shot_num} itself stays a gap for "
+                  f"now -- see this file's docstring for how gaps get "
+                  f"swept up).")
+            self.context.close()
+            time.sleep(ACCOUNT_COOLDOWN_S)
+            self.already_cooled_down_this_account = True
+            self.context, self.page = launch_session(self.p, self.account)
+
+        elif self.account_fail_streak >= RESTART_AFTER_CONSECUTIVE_FAILURES:
+            print(f"\n  {self.account_fail_streak} downloads in a row didn't "
+                  f"come through -- restarting the browser (same "
+                  f"account, '{self.account.name}') before "
+                  f"moving on to the next shot (shot {shot_num} itself stays a "
+                  f"gap for now).")
+            self._relaunch()
+            # don't reset account_fail_streak here: a restart that
+            # doesn't actually help should still count toward the
+            # cooldown/switch/round thresholds above.
+
+    def close(self) -> None:
+        self.context.close()
 
 
 def main() -> None:
@@ -499,30 +672,36 @@ def main() -> None:
               f"{[a.name for a in accounts]}")
 
     stalled_out = False
-    account_idx = 0
     with sync_playwright() as p:
-        context, page = launch_session(p, accounts[account_idx])
+        st = EscalationState(p, accounts)
 
         failures = []
-        account_fail_streak = 0    # consecutive failures on the CURRENT account
-        already_cooled_down_this_account = False  # level-2 fires once per account attempt
-        accounts_tried_this_round = 0  # accounts switched away from, still failing
-        rounds_exhausted = 0       # full rotations where every account failed
         try:
             for i, (n, prompt, dest) in enumerate(todo):
                 print(f"\n[{i+1}/{len(todo)}] Shot {n}: {prompt[:80]}{'...' if len(prompt) > 80 else ''} "
-                      f"[{accounts[account_idx].name}]")
+                      f"[{st.account.name}]")
                 try:
-                    generate_and_download(page, n, prompt, dest)
+                    generate_and_download(st.page, n, prompt, dest)
                     print(f"  -> saved {dest.name}")
-                    account_fail_streak = 0
-                    already_cooled_down_this_account = False
-                    accounts_tried_this_round = 0
-                    rounds_exhausted = 0
+                    st.on_success()
+                except FlowBlockedError as e:
+                    # Flow itself blocked this account (quota exhausted,
+                    # an "unusual activity" flag, etc.) -- retrying or
+                    # restarting THIS account can't possibly help, so
+                    # skip straight to switching accounts instead of
+                    # wasting a restart+cooldown on it first.
+                    print(f"  !! BLOCKED: {e}")
+                    failures.append(n)
+                    if len(failures) >= 3 and len(failures) == i + 1:
+                        print("\n3 failures in a row right at the start -- something's "
+                              "likely broken (selector mismatch, not logged in, wrong "
+                              "project URL, or every account already blocked). "
+                              "Stopping rather than burning your quota.")
+                        break
+                    st.on_failure(n, force_switch=True, reason=str(e))
                 except (PWTimeoutError, TimeoutError, Exception) as e:
                     print(f"  !! FAILED: {e}")
                     failures.append(n)
-                    account_fail_streak += 1
 
                     if len(failures) >= 3 and len(failures) == i + 1:
                         print("\n3 failures in a row right at the start -- something's "
@@ -530,77 +709,16 @@ def main() -> None:
                               "project URL). Stopping rather than burning your quota.")
                         break
 
-                    if account_fail_streak >= SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES:
-                        accounts_tried_this_round += 1
-
-                        if accounts_tried_this_round >= len(accounts):
-                            rounds_exhausted += 1
-                            if rounds_exhausted >= MAX_ROUNDS_BEFORE_STOP:
-                                print(f"\n  Every account failed, {rounds_exhausted} "
-                                      "full rotation(s) in a row (with a cooldown "
-                                      "between each) -- stopping cleanly (still "
-                                      "logged in everywhere) rather than looping "
-                                      "further unattended.")
-                                raise StalledOut()
-                            print(f"\n  All {len(accounts)} account(s) failed this "
-                                  f"round -- backing off {ROUND_COOLDOWN_S // 60} min "
-                                  "in case this is a rate-limit/\"unusual activity\" "
-                                  f"flag, then retrying from {accounts[0].name}.")
-                            context.close()
-                            time.sleep(ROUND_COOLDOWN_S)
-                            account_idx = 0
-                            accounts_tried_this_round = 0
-                            account_fail_streak = 0
-                            already_cooled_down_this_account = False
-                            context, page = launch_session(p, accounts[account_idx])
-                        else:
-                            account_idx = (account_idx + 1) % len(accounts)
-                            print(f"\n  {SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES} "
-                                  f"downloads in a row didn't come through, restart "
-                                  f"and cooldown included -- switching to account "
-                                  f"'{accounts[account_idx].name}' for the rest of "
-                                  f"this run (shot {n} itself stays a gap -- a later "
-                                  f"pass over this same range picks it back up, since "
-                                  f"anything already downloaded gets skipped).")
-                            context.close()
-                            account_fail_streak = 0
-                            already_cooled_down_this_account = False
-                            context, page = launch_session(p, accounts[account_idx])
-
-                    elif account_fail_streak >= COOLDOWN_AFTER_CONSECUTIVE_FAILURES and not already_cooled_down_this_account:
-                        print(f"\n  {account_fail_streak} downloads in a row didn't "
-                              f"come through, restart included -- backing off "
-                              f"{ACCOUNT_COOLDOWN_S // 60} min on account "
-                              f"'{accounts[account_idx].name}' in case it's just "
-                              f"this one that's rate-limited, then continuing with "
-                              f"the next shot on it (shot {n} itself stays a gap for "
-                              f"now -- see this file's docstring for how gaps get "
-                              f"swept up).")
-                        context.close()
-                        time.sleep(ACCOUNT_COOLDOWN_S)
-                        already_cooled_down_this_account = True
-                        context, page = launch_session(p, accounts[account_idx])
-
-                    elif account_fail_streak >= RESTART_AFTER_CONSECUTIVE_FAILURES:
-                        print(f"\n  {account_fail_streak} downloads in a row didn't "
-                              f"come through -- restarting the browser (same "
-                              f"account, '{accounts[account_idx].name}') before "
-                              f"moving on to the next shot (shot {n} itself stays a "
-                              f"gap for now).")
-                        context.close()
-                        context, page = launch_session(p, accounts[account_idx])
-                        # don't reset account_fail_streak here: a restart that
-                        # doesn't actually help should still count toward the
-                        # cooldown/switch/round thresholds above.
+                    st.on_failure(n)
 
                 if i < len(todo) - 1:
                     delay = random.uniform(MIN_DELAY_S, MAX_DELAY_S)
                     print(f"  waiting {delay:.0f}s before next shot...")
-                    page.wait_for_timeout(int(delay * 1000))
+                    st.page.wait_for_timeout(int(delay * 1000))
         except StalledOut:
             stalled_out = True
         else:
-            context.close()
+            st.close()
 
     if stalled_out:
         print(

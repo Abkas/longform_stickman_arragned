@@ -48,3 +48,6 @@ videos/**/render_clips/
 # flow_batch_driver.py's failure-diagnosis screenshots — grows unbounded
 # on every run, purely for local debugging, never posted to GitHub
 system/05_visuals/.flow_debug/
+
+# full terminal-output logs of driver runs — local debugging record only
+system/05_visuals/logs/
