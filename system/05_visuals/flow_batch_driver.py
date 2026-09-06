@@ -54,6 +54,16 @@ generate/generated/images/ is skipped (same convention as
 generate_visuals.py), so a crash partway through just needs a re-run with
 the same --range.
 
+Important: a shot that fails is NOT retried in-place within the same run
+-- the loop just moves on to the next shot (on whatever account/browser
+state resulted from that failure's recovery step, see below) and leaves
+the failed one as a gap. This is deliberate: one genuinely-broken shot
+retrying forever would block the rest of the video from making progress.
+Gaps get swept up by running this same command again (skips everything
+already downloaded, so only the gaps actually run) -- run_full_batch.py
+does exactly that automatically per chunk, plus a final whole-video
+cleanup pass, so you don't have to do it by hand when using that.
+
 Stall recovery (fully unattended -- never logs you out of any account, so
 it's safe to leave running overnight). Escalates per shot, across
 whichever account is currently active:
@@ -548,8 +558,10 @@ def main() -> None:
                             print(f"\n  {SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES} "
                                   f"downloads in a row didn't come through, restart "
                                   f"and cooldown included -- switching to account "
-                                  f"'{accounts[account_idx].name}' and retrying "
-                                  f"shot {n}.")
+                                  f"'{accounts[account_idx].name}' for the rest of "
+                                  f"this run (shot {n} itself stays a gap -- a later "
+                                  f"pass over this same range picks it back up, since "
+                                  f"anything already downloaded gets skipped).")
                             context.close()
                             account_fail_streak = 0
                             already_cooled_down_this_account = False
@@ -560,7 +572,10 @@ def main() -> None:
                               f"come through, restart included -- backing off "
                               f"{ACCOUNT_COOLDOWN_S // 60} min on account "
                               f"'{accounts[account_idx].name}' in case it's just "
-                              f"this one that's rate-limited, then retrying shot {n}.")
+                              f"this one that's rate-limited, then continuing with "
+                              f"the next shot on it (shot {n} itself stays a gap for "
+                              f"now -- see this file's docstring for how gaps get "
+                              f"swept up).")
                         context.close()
                         time.sleep(ACCOUNT_COOLDOWN_S)
                         already_cooled_down_this_account = True
@@ -570,7 +585,8 @@ def main() -> None:
                         print(f"\n  {account_fail_streak} downloads in a row didn't "
                               f"come through -- restarting the browser (same "
                               f"account, '{accounts[account_idx].name}') before "
-                              f"retrying shot {n}.")
+                              f"moving on to the next shot (shot {n} itself stays a "
+                              f"gap for now).")
                         context.close()
                         context, page = launch_session(p, accounts[account_idx])
                         # don't reset account_fail_streak here: a restart that
