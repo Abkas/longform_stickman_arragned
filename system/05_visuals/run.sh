@@ -16,4 +16,13 @@
 
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Unbuffered stdout -- without this, print() output sits in Python's
+# default block buffer (several KB) whenever stdout is redirected to a
+# file/pipe instead of a live terminal, so a log file redirected from a
+# long run looks empty/stale for minutes at a time even while the script
+# is actively working, only catching up in one big dump at exit. Exported
+# (not just -u on this process) so it also reaches run_full_batch.py's
+# own subprocess.run() calls to flow_batch_driver.py, which inherit the
+# environment by default.
+export PYTHONUNBUFFERED=1
 exec "$DIR/.venv/bin/python3" "$DIR/$1" "${@:2}"

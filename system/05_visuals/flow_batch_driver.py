@@ -114,14 +114,17 @@ Worth knowing before leaning on this for a big unattended run.
 from __future__ import annotations
 
 import argparse
+import json
 import random
 import re
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple, Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeoutError
+from PIL import Image, UnidentifiedImageError
 
 sys.path.insert(0, str(Path(__file__).parent))
 from verify_batch import parse_shot_list, slugify  # noqa: E402
@@ -164,10 +167,15 @@ def profile_dir_for(account_name: Optional[str]) -> Path:
 #   5. If MAX_ROUNDS_BEFORE_STOP full rounds all end up back here, give up
 #      cleanly (still logged in everywhere) rather than looping for real
 #      hours on something that's actually broken.
+# MAX_ROUNDS_BEFORE_STOP raised 5 -> 24 (2026-09-10, at the user's request):
+# with ROUND_COOLDOWN_S at 1hr, 5 rounds gave up after ~5hrs -- too early
+# for an unattended run meant to keep working through a full day/quota
+# reset cycle. 24 rounds -> worst case (every account blocked every
+# round) keeps retrying for about a day before finally giving up.
 RESTART_AFTER_CONSECUTIVE_FAILURES = 2
 COOLDOWN_AFTER_CONSECUTIVE_FAILURES = 4
 SWITCH_ACCOUNT_AFTER_CONSECUTIVE_FAILURES = 6
-MAX_ROUNDS_BEFORE_STOP = 5
+MAX_ROUNDS_BEFORE_STOP = 24
 
 # How long to back off on the SAME account before restarting it again
 # (level 2), in seconds. Default 10 min.
@@ -192,6 +200,45 @@ MAX_DELAY_S = 55
 # How long to wait for one generation to finish before giving up on it.
 GENERATION_TIMEOUT_MS = 120_000
 
+# Per-account quota-cooldown model (2026-09-10, replacing the old
+# "retry the whole round after ROUND_COOLDOWN_S" approach for FlowBlockedError
+# specifically -- see EscalationState.on_quota_blocked). At the user's
+# request: once an account hits Flow's own "usage limit" block, retrying it
+# again and again is pointless -- it gets its OWN cooldown timer and the run
+# just moves on to whichever OTHER account isn't currently cooling down,
+# picking back up on any account the moment its timer expires, rather than
+# a single shared wait that blocks the whole run.
+#
+# How long that cooldown should be isn't precisely knowable from outside --
+# researched 2026-09-10: Google's documented models are either a ~24h daily
+# reset (the older, and apparently still-common, free-tier model: 50
+# credits/day, refreshing 24h after first use that day) or a newer
+# 2026 "compute-based" model resetting every ~5h on some plans, and which
+# applies isn't visible to us. Real evidence from this account settles it in
+# practice, though: 'default' got blocked ~14:32 and was STILL blocked at
+# 20:59 -- 6.5+ hours later, past even the 5h model. So rather than hard-code
+# a guess that's already contradicted by observation, this starts at a
+# moderate guess and adapts: if an account gets blocked again right after
+# its cooldown just expired, the cooldown DOUBLES for that account next time
+# (capped at 24h) -- converging on whatever's actually true instead of
+# repeating a wrong guess all day.
+ACCOUNT_QUOTA_COOLDOWN_S = 6 * 3600       # 6h starting guess
+MAX_ACCOUNT_QUOTA_COOLDOWN_S = 24 * 3600  # cap -- matches the documented daily-reset model
+
+# How long this PROCESS will sleep in-place waiting for an account's
+# cooldown, before giving up and exiting cleanly instead (2026-09-11, at
+# the user's request, mirroring this machine's existing astrellee social
+# automation: a systemd --user timer re-invokes this script every 15 min
+# rather than one process sleeping for up to 24h). A single process
+# blocked in time.sleep() for half a day is fragile -- a laptop suspend,
+# a crash, a Ctrl+C, anything kills the wait and loses all of it with
+# nothing to show; a short timer re-check is what "catches up after the
+# laptop was off/offline" actually means in practice (same reasoning as
+# astrellee-facebook-check.timer's own description). Set higher than the
+# timer interval so a wait shorter than one tick still resolves in-process
+# without waiting for the next external re-invocation.
+MAX_INPROCESS_COOLDOWN_WAIT_S = 20 * 60  # 20 min
+
 
 def setup_session(page) -> None:
     """One-time per-session settings: image mode, aspect ratio, model,
@@ -210,21 +257,68 @@ def setup_session(page) -> None:
     page.get_by_label("Settings trigger").click()
 
 
-def enter_prompt(page, prompt: str) -> None:
-    box = page.locator("p").filter(has_text="What do you want to create?")
-    box_geo = box.bounding_box()
-    if box_geo:
-        # Raw mouse click at the box's coordinates rather than
-        # locator.click() -- confirmed from a real run that .click() can
-        # silently fail to focus the real input on a second/later use
-        # (prompt stayed empty, nothing ever got submitted, no error
-        # raised). Mirrors the same fix used for the hover-reveal "More
-        # options" button.
-        cx = box_geo["x"] + box_geo["width"] / 2
-        cy = box_geo["y"] + box_geo["height"] / 2
-        page.mouse.click(cx, cy)
-    else:
-        box.click()  # fallback if bounding_box() ever comes back empty
+def _locate_prompt_box(page):
+    """Find the "What do you want to create?" prompt box. Tried in order --
+    confirmed from a real debug screenshot (2026-09-10) that the box IS on
+    screen when the old `page.locator("p").filter(has_text=...)` selector
+    times out, so that text is very likely rendered as a `placeholder`
+    attribute (or CSS pseudo-content) on an input/textarea, not literal
+    text inside a <p>, which a <p>-text filter can never match. Tries the
+    placeholder-attribute reading first, falls back to the old <p> filter
+    and a tag-agnostic text search in case the real markup differs from
+    either guess. Returns a bounding box dict, or None if nothing matched
+    (each candidate uses .count() first, which doesn't wait, so a missing
+    candidate is a fast skip rather than a 30s timeout)."""
+    candidates = [
+        page.get_by_placeholder("What do you want to create?"),
+        page.get_by_text("What do you want to create?", exact=False),
+        page.locator("p").filter(has_text="What do you want to create?"),
+    ]
+    for loc in candidates:
+        try:
+            if loc.count() > 0:
+                box = loc.first.bounding_box()
+                if box:
+                    return box
+        except Exception:
+            continue
+    return None
+
+
+def _prompt_box_is_empty(page) -> bool:
+    """True if the box is currently showing its placeholder text (i.e. has
+    no typed content) -- unlike get_by_placeholder (attribute-based, always
+    matches regardless of content), these two checks only match when the
+    box is actually empty, so this is real evidence a submission cleared
+    it, not just that the element exists."""
+    for loc in (
+        page.get_by_text("What do you want to create?", exact=False),
+        page.locator("p").filter(has_text="What do you want to create?"),
+    ):
+        try:
+            if loc.count() > 0:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def enter_prompt(page, shot_num: int, prompt: str) -> None:
+    box_geo = _locate_prompt_box(page)
+    if box_geo is None:
+        _debug_shot(page, shot_num, "prompt-box-not-found")
+        raise TimeoutError(
+            f"Prompt box ('What do you want to create?') never appeared for "
+            f"shot {shot_num} -- see {DEBUG_DIR}/shot{shot_num}_prompt-box-not-found.png"
+        )
+    # Raw mouse click at the box's coordinates rather than locator.click()
+    # -- confirmed from a real run that .click() can silently fail to focus
+    # the real input on a second/later use (prompt stayed empty, nothing
+    # ever got submitted, no error raised). Mirrors the same fix used for
+    # the hover-reveal "More options" button.
+    cx = box_geo["x"] + box_geo["width"] / 2
+    cy = box_geo["y"] + box_geo["height"] / 2
+    page.mouse.click(cx, cy)
     page.wait_for_timeout(200)
     page.keyboard.press("Control+A")
     page.keyboard.press("Delete")
@@ -232,6 +326,18 @@ def enter_prompt(page, prompt: str) -> None:
 
 
 DEBUG_DIR = Path(__file__).parent / ".flow_debug"
+
+# Per-account quota-cooldown state, persisted to disk -- added 2026-09-11
+# after switching to short-lived periodic invocations (a systemd timer
+# re-running this script every 15 min, see auto_batch_run.sh) instead of
+# one long-lived process sleeping through cooldowns. A fresh process has
+# no memory of an account having already been blocked earlier -- without
+# persisting this, the adaptive doubling (EscalationState.on_quota_blocked)
+# never actually compounds, and worse, every 15-min tick would blindly
+# re-try an account still deep in a 6-24h cooldown instead of skipping it
+# outright. Shared across all invocations (single file, not per-video --
+# an account's real-world quota is account-level, not tied to one video).
+QUOTA_COOLDOWN_STATE_FILE = Path(__file__).parent / ".flow_quota_cooldowns.json"
 
 
 def _debug_shot(page, shot_num: int, tag: str) -> None:
@@ -277,11 +383,43 @@ def newest_tile_center_point(page):
     return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
 
-def _grid_tile_count(page) -> int:
-    return len([
-        1 for loc in page.get_by_label("More options").all()
-        if (box := loc.bounding_box()) and box["y"] > HEADER_CUTOFF_Y and box["x"] > SIDEBAR_CUTOFF_X
-    ])
+def _topmost_tile_image_src(page) -> Optional[str]:
+    """Return the `src` of the topmost-leftmost tile's thumbnail <img> in
+    the grid (same header/sidebar exclusion as newest_tile_center_point),
+    or None if no tile is present. Added 2026-09-10 after a real,
+    confirmed bug: once the completion-detection fix (see
+    generate_and_download's docstring comment) stopped requiring the
+    topmost tile to be provably NEW before downloading it, the script
+    would happily download whatever old, already-existing tile happened
+    to sort as topmost-leftmost -- confirmed from real downloaded files:
+    shots 1, 18 and 20 all ended up as byte-identical copies of a much
+    earlier, unrelated shot's image (shot 14's), because that old tile
+    was still sitting at the top of that account's grid when a newer
+    submission hadn't visually landed there yet (or landed somewhere the
+    position-sort didn't pick up first). A thumbnail's `src` is a stable
+    per-asset identifier, so comparing it before/after submission (see
+    generate_and_download) is a genuine, content-based "is this actually
+    new" check -- unlike the old page-wide button COUNT this replaced
+    days earlier, which broke down once many tiles existed; this doesn't
+    depend on counting anything, just on the identity of one specific
+    tile changing."""
+    candidates = page.locator("img").all()
+    in_grid = []
+    for loc in candidates:
+        try:
+            box = loc.bounding_box()
+        except Exception:
+            continue
+        if box and box["y"] > HEADER_CUTOFF_Y and box["x"] > SIDEBAR_CUTOFF_X:
+            try:
+                src = loc.get_attribute("src")
+            except Exception:
+                src = None
+            in_grid.append((box["y"], box["x"], src))
+    if not in_grid:
+        return None
+    in_grid.sort(key=lambda t: (t[0], t[1]))
+    return in_grid[0][2]
 
 
 # Specific reasons seen so far in Flow's "Failed / not charged" error
@@ -332,24 +470,38 @@ class FlowBlockedError(Exception):
 
 
 def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> None:
-    more_options_before = _grid_tile_count(page)
+    # Baseline thumbnail identity, captured BEFORE submitting anything --
+    # see _topmost_tile_image_src's docstring for why this exists (a real
+    # bug: shots 1/18/20 all downloaded as copies of an unrelated, much
+    # earlier shot's image once the "is this actually new" gate was
+    # dropped). Compared against the post-submission value below; the
+    # download flow refuses to proceed until the topmost tile's identity
+    # has genuinely changed.
+    baseline_src = _topmost_tile_image_src(page)
 
     # Submit-confirmation retry: typing/clicking can silently fail to
     # actually submit anything (confirmed from a real run -- prompt box
-    # stayed empty, no new tile ever appeared, no error raised). Rather
-    # than trust one type+click and wait the full 2-minute generation
-    # timeout on a submission that never happened, do a FAST check (a few
-    # seconds) that a new placeholder tile actually showed up, and retry
-    # the whole type+submit cycle if not.
+    # stayed empty, no new tile ever appeared, no error raised). Checked via
+    # _prompt_box_is_empty (did the box actually clear back to its
+    # placeholder state), NOT via _grid_tile_count -- confirmed from a real
+    # debug screenshot (2026-09-10) that a freshly-submitted generation
+    # shows as an in-progress placeholder tile with no "More options"
+    # button yet (that only appears once rendering finishes), so the old
+    # tile-count check couldn't tell a genuinely-still-rendering submission
+    # from one that never went through, and retried real, already-running
+    # generations -- burning quota on duplicate images sitting in the Flow
+    # project (confirmed: several shots came back 2-3x in the media grid
+    # after a run using the old check). The box-empty check is unambiguous:
+    # Flow only clears it once the click actually registers.
     submitted = False
     for submit_attempt in range(3):
-        enter_prompt(page, prompt)
+        enter_prompt(page, shot_num, prompt)
         page.wait_for_timeout(300)
         page.get_by_label("Start generation").click()
 
         quick_deadline = time.monotonic() + 8
         while time.monotonic() < quick_deadline:
-            if _grid_tile_count(page) > more_options_before:
+            if _prompt_box_is_empty(page):
                 submitted = True
                 break
             reason = _flow_error_card_text(page)
@@ -372,12 +524,29 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
             f"{DEBUG_DIR}/shot{shot_num}_submit-attempt-*-no-effect.png"
         )
 
-    # Wait for the generation to actually finish (the quick check above
-    # only confirms it started -- this is the full wait for it to render).
+    # Wait for the generation to actually finish, THEN confirm the newest
+    # tile's menu actually offers Download -- merged into one loop
+    # (2026-09-10, after a real debug screenshot showed the OLD two-phase
+    # version fail): the previous "wait for completion" phase compared
+    # _grid_tile_count() (a page-wide count of every "More options" button
+    # anywhere in the grid) against a baseline taken before submission.
+    # That comparison went stale on a long-running session with many tiles
+    # accumulated (duplicates from before today's earlier fix, prior test
+    # batches, etc.) -- confirmed from shot 18's debug screenshot: the
+    # image had ACTUALLY finished rendering, sitting right there fully
+    # complete in the grid, while the count-based check still timed out
+    # and declared failure, leaving a real generated image never
+    # downloaded. The per-tile check below (does opening the NEWEST tile's
+    # own menu specifically offer "Download") doesn't depend on counting
+    # anything page-wide, so it isn't thrown off by how many other tiles
+    # exist. The topmost-leftmost tile is the newest result; right after
+    # it first appears it can still be a LOADING placeholder (its menu
+    # only has Rename/View trash/Delete, no Download, until the image
+    # actually finishes rendering) -- confirmed from a real run's debug
+    # screenshot, hence the retry-with-close-and-rewait below.
+    download_ready = False
     deadline = time.monotonic() + GENERATION_TIMEOUT_MS / 1000
     while time.monotonic() < deadline:
-        if _grid_tile_count(page) > more_options_before:
-            break
         reason = _flow_error_card_text(page)
         if reason:
             _debug_shot(page, shot_num, "flow-error")
@@ -386,22 +555,13 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
                 "not charged) -- this account is blocked for now "
                 f"(see {DEBUG_DIR}/shot{shot_num}_flow-error.png)"
             )
-        page.wait_for_timeout(2000)
-    else:
-        _debug_shot(page, shot_num, "no-new-result")
-        raise TimeoutError("Timed out waiting for a new generated result "
-                            f"(see {DEBUG_DIR}/shot{shot_num}_no-new-result.png)")
-
-    _debug_shot(page, shot_num, "before-more-options")
-
-    # The topmost-leftmost tile in the grid is the newest result. Right
-    # after it first appears it can still be a LOADING placeholder (its
-    # menu only has Rename/View trash/Delete, no Download, until the image
-    # actually finishes rendering) -- confirmed from a real run's debug
-    # screenshot. So: open the menu, check Download is actually in it, and
-    # if not, close and wait longer for the real finish.
-    download_ready = False
-    for attempt in range(20):  # ~20 * 3.5s = up to 70s of extra waiting past "first appeared"
+        current_src = _topmost_tile_image_src(page)
+        if current_src is None or current_src == baseline_src:
+            # Either no tile at all yet, or still the SAME tile that was
+            # there before this shot was even submitted -- not a real
+            # result for THIS shot, don't open its menu or download it.
+            page.wait_for_timeout(3000)
+            continue
         point = newest_tile_center_point(page)
         if point is None:
             page.wait_for_timeout(3000)
@@ -434,7 +594,8 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
         _debug_shot(page, shot_num, "no-download-menuitem")
         raise TimeoutError(
             "Opened 'More options' repeatedly but never saw a 'Download' "
-            f"item -- see {DEBUG_DIR}/shot{shot_num}_after-more-options-click.png "
+            f"item within {GENERATION_TIMEOUT_MS // 1000}s -- see "
+            f"{DEBUG_DIR}/shot{shot_num}_after-more-options-click.png "
             "to see what actually opened."
         )
 
@@ -447,6 +608,67 @@ def generate_and_download(page, shot_num: int, prompt: str, dest_path: Path) -> 
         page.get_by_role("menuitem", name="1K Original size").click()
     download = dl_info.value
     download.save_as(str(dest_path))
+    _verify_downloaded_image(dest_path, shot_num)
+
+
+def _verify_downloaded_image(dest_path: Path, shot_num: int) -> None:
+    """Confirm dest_path is a real, complete image before the caller
+    considers this shot done -- at the user's request (2026-09-10): one
+    shot's download must be verified before the next prompt is ever sent,
+    strictly sequential, no exceptions. Checks existence, non-zero size,
+    and that PIL can actually decode it (catches a truncated/partial
+    download that Playwright's save_as() didn't itself error on). Deletes
+    a bad file rather than leaving it behind -- a corrupt file would
+    otherwise satisfy the "already have a file" skip-check on the next
+    run and silently stay broken forever."""
+    if not dest_path.exists() or dest_path.stat().st_size == 0:
+        if dest_path.exists():
+            dest_path.unlink()
+        raise TimeoutError(
+            f"Shot {shot_num}: download reported success but "
+            f"{dest_path.name} is missing or empty -- not counting this "
+            "as done."
+        )
+    try:
+        with Image.open(dest_path) as img:
+            img.verify()
+    except (UnidentifiedImageError, OSError) as e:
+        dest_path.unlink()
+        raise TimeoutError(
+            f"Shot {shot_num}: downloaded {dest_path.name} isn't a valid "
+            f"image ({e}) -- deleted it, will retry rather than leave a "
+            "corrupt file that looks done."
+        )
+
+
+class EventLog:
+    """Structured, machine-analyzable log of every shot-level event, one
+    JSON object per line, appended to (never overwritten) across separate
+    runs of this video -- at the user's request (2026-09-10): a record of
+    which prompt/shot succeeded on which account, which got blocked, when
+    an account switch or cooldown happened, etc., kept separately from the
+    prose printed to stdout/the log file so it can be grepped/loaded (e.g.
+    `pandas.read_json(path, lines=True)`) for analysis later instead of
+    re-parsing free-text log lines. Line-buffered + flushed after every
+    write so it's readable live, same reasoning as run.sh's
+    PYTHONUNBUFFERED fix for the prose log."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._f = open(path, "a", buffering=1)
+
+    def log(self, event: str, **fields) -> None:
+        record = {
+            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "event": event,
+            **fields,
+        }
+        self._f.write(json.dumps(record) + "\n")
+        self._f.flush()
+
+    def close(self) -> None:
+        self._f.close()
 
 
 class StalledOut(Exception):
@@ -519,31 +741,204 @@ class EscalationState:
     one step of escalation per failed shot. See this file's module
     docstring for the full 5-level ladder this implements."""
 
-    def __init__(self, p, accounts: list) -> None:
+    def __init__(self, p, accounts: list, events: Optional[EventLog] = None) -> None:
         self.p = p
         self.accounts = accounts
+        self.events = events
         self.account_idx = 0
         self.account_fail_streak = 0        # consecutive failures on the CURRENT account
         self.already_cooled_down_this_account = False  # level-2 fires once per account attempt
         self.accounts_tried_this_round = 0  # accounts switched away from, still failing
         self.rounds_exhausted = 0           # full rotations where every account failed
+        self.quota_blocked_until: dict[str, float] = {}   # account name -> time.time() it's usable again
+        self.quota_blocked_streak: dict[str, int] = {}    # account name -> consecutive quota-blocks (for adaptive backoff)
+        self._load_quota_state()
         self.context, self.page = launch_session(p, self.account)
 
     @property
     def account(self) -> Account:
         return self.accounts[self.account_idx]
 
+    def _load_quota_state(self) -> None:
+        """Load quota_blocked_until/quota_blocked_streak from disk, if
+        present -- see QUOTA_COOLDOWN_STATE_FILE's comment. Missing/corrupt
+        file just means "no known cooldowns yet", not an error."""
+        try:
+            data = json.loads(QUOTA_COOLDOWN_STATE_FILE.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            return
+        for name, entry in data.items():
+            if "until" in entry:
+                self.quota_blocked_until[name] = entry["until"]
+            if "streak" in entry:
+                self.quota_blocked_streak[name] = entry["streak"]
+
+    def _save_quota_state(self) -> None:
+        names = set(self.quota_blocked_until) | set(self.quota_blocked_streak)
+        data = {
+            name: {
+                "until": self.quota_blocked_until.get(name, 0),
+                "streak": self.quota_blocked_streak.get(name, 0),
+            }
+            for name in names
+        }
+        try:
+            QUOTA_COOLDOWN_STATE_FILE.write_text(json.dumps(data, indent=2))
+        except OSError:
+            pass  # persistence is best-effort -- losing it just means the next process re-learns from Flow directly
+
     def on_success(self) -> None:
         self.account_fail_streak = 0
         self.already_cooled_down_this_account = False
         self.accounts_tried_this_round = 0
         self.rounds_exhausted = 0
+        # A real success proves this account's quota is genuinely clear
+        # right now -- reset its adaptive backoff so a later, unrelated
+        # block doesn't inherit an inflated cooldown from a past streak.
+        self.quota_blocked_streak[self.account.name] = 0
+        self._save_quota_state()
 
     def _relaunch(self, account_idx=None) -> None:
         if account_idx is not None:
             self.account_idx = account_idx
         self.context.close()
         self.context, self.page = launch_session(self.p, self.account)
+
+    def _launch_first_working(self, start_idx: int) -> bool:
+        """Try launching accounts starting at start_idx, wrapping around,
+        skipping any that fail to LAUNCH (as opposed to fail a shot) --
+        added 2026-09-10 after a real run died entirely because one
+        account ('acc3') couldn't launch (a selector issue unrelated to
+        quota/blocking), even though the other two accounts were fine.
+        Before this, any launch_session() failure during account-switch or
+        round-cooldown propagated all the way out of the shot loop and
+        killed the whole run (`launch_failed` in main()), defeating the
+        entire point of having multiple accounts to rotate through.  Sets
+        self.account_idx/context/page on the first account that launches;
+        returns False only if NONE of the configured accounts can even
+        launch (a real "nothing works" situation, still worth stopping
+        for)."""
+        n = len(self.accounts)
+        for offset in range(n):
+            idx = (start_idx + offset) % n
+            try:
+                ctx, pg = launch_session(self.p, self.accounts[idx])
+            except Exception as e:
+                print(f"\n  Couldn't launch account '{self.accounts[idx].name}': "
+                      f"{e} -- skipping this account, trying the next one.")
+                if self.events:
+                    self.events.log("account_launch_failed",
+                                     account=self.accounts[idx].name, reason=str(e))
+                continue
+            self.account_idx = idx
+            self.context, self.page = ctx, pg
+            return True
+        return False
+
+    def _launch_first_available(self, start_idx: int) -> bool:
+        """Like _launch_first_working, but ALSO skips any account still
+        under its own quota_blocked_until cooldown -- used exclusively by
+        on_quota_blocked's per-account rotation model. Sets
+        self.account_idx/context/page on success; returns False only if
+        every account is either still cooling down or fails to launch."""
+        n = len(self.accounts)
+        now = time.time()  # wall-clock, not monotonic -- quota_blocked_until is persisted across process restarts
+        for offset in range(n):
+            idx = (start_idx + offset) % n
+            acct = self.accounts[idx]
+            if self.quota_blocked_until.get(acct.name, 0) > now:
+                continue
+            try:
+                ctx, pg = launch_session(self.p, acct)
+            except Exception as e:
+                print(f"\n  Couldn't launch account '{acct.name}': {e} -- skipping.")
+                if self.events:
+                    self.events.log("account_launch_failed", account=acct.name, reason=str(e))
+                continue
+            self.account_idx = idx
+            self.context, self.page = ctx, pg
+            return True
+        return False
+
+    def on_quota_blocked(self, shot_num: int, reason: str) -> None:
+        """Handle a FlowBlockedError (Flow's own "usage limit"/"unusual
+        activity" card) under the per-account cooldown model -- see the
+        ACCOUNT_QUOTA_COOLDOWN_S comment above for why this replaced the
+        old shared-round-cooldown approach. Retrying or restarting the
+        SAME account can't possibly help (Flow itself rejected it, not a
+        flaky selector), so: put this account on its own cooldown timer
+        (doubling if it got blocked again right after its last cooldown
+        ended), then move straight to whichever OTHER account isn't
+        currently cooling down. If literally every account is cooling
+        down right now, sleep until the EARLIEST one clears -- not a
+        fixed shared wait -- then resume with that one. Never gives up:
+        this is meant to run unattended across cooldowns all day."""
+        name = self.account.name
+        streak = self.quota_blocked_streak.get(name, 0) + 1
+        self.quota_blocked_streak[name] = streak
+        cooldown = min(ACCOUNT_QUOTA_COOLDOWN_S * (2 ** (streak - 1)), MAX_ACCOUNT_QUOTA_COOLDOWN_S)
+        until = time.time() + cooldown  # wall-clock, not monotonic -- persisted across process restarts
+        self.quota_blocked_until[name] = until
+        print(f"\n  '{name}' quota-blocked ({reason}) -- cooling down for "
+              f"{cooldown / 3600:.1f}h (blocked-in-a-row: {streak}), shot {shot_num} "
+              "stays a gap for now. Moving to the next available account.")
+        if self.events:
+            self.events.log("account_quota_cooldown", shot=shot_num, account=name,
+                             reason=reason, cooldown_hours=round(cooldown / 3600, 2),
+                             blocked_streak=streak)
+        self._save_quota_state()
+
+        self.context.close()
+        next_idx = (self.account_idx + 1) % len(self.accounts)
+        if self._launch_first_available(next_idx):
+            print(f"  Switched to account '{self.account.name}'.")
+            return
+
+        # Every account is either cooling down or failing to launch --
+        # wait for whichever one clears first, then use it.
+        now = time.time()  # wall-clock, matching quota_blocked_until
+        # Accounts with no entry yet (never blocked) would have been
+        # picked by _launch_first_available already if launchable, so
+        # reaching here means every account either has a real cooldown
+        # timestamp or just failed to launch; only wait on ones with an
+        # actual timestamp.
+        waits = {a.name: self.quota_blocked_until.get(a.name, now) for a in self.accounts}
+        soonest_name = min(waits, key=waits.get)
+        soonest_at = waits[soonest_name]
+        wait_s = max(0, soonest_at - now)
+
+        if wait_s > MAX_INPROCESS_COOLDOWN_WAIT_S:
+            # Too long to sleep through in-process (see
+            # MAX_INPROCESS_COOLDOWN_WAIT_S) -- exit cleanly instead of
+            # blocking for hours. The systemd timer (or whatever re-runs
+            # this) picks it back up on its next tick; nothing is lost,
+            # every cooldown timestamp already recorded in this run is
+            # gone once the process exits, but the NEXT invocation just
+            # re-discovers "still blocked" from Flow itself within a
+            # couple of shots and re-applies the same adaptive cooldown.
+            print(f"\n  Every account is cooling down (or failing to launch) right now. "
+                  f"Soonest is '{soonest_name}' in {wait_s / 60:.0f} min -- longer than this "
+                  f"process will wait in-place ({MAX_INPROCESS_COOLDOWN_WAIT_S // 60} min cap). "
+                  "Exiting cleanly; re-run later (or let a scheduled timer re-invoke this) "
+                  "to pick back up.")
+            if self.events:
+                self.events.log("all_accounts_cooldown_exit", shot=shot_num,
+                                 wait_minutes=round(wait_s / 60, 1), next_account=soonest_name)
+            raise StalledOut()
+
+        print(f"\n  Every account is cooling down (or failing to launch) right now. "
+              f"Waiting {wait_s / 60:.0f} min for '{soonest_name}' to clear.")
+        if self.events:
+            self.events.log("all_accounts_cooldown_wait", shot=shot_num,
+                             wait_minutes=round(wait_s / 60, 1), next_account=soonest_name)
+        time.sleep(wait_s)
+        soonest_idx = next(i for i, a in enumerate(self.accounts) if a.name == soonest_name)
+        if not self._launch_first_available(soonest_idx):
+            # Extremely unlikely (would mean even the just-cleared account
+            # fails to LAUNCH, not just quota) -- fall back to the old
+            # launch-resilience helper so this doesn't hang forever.
+            if not self._launch_first_working(soonest_idx):
+                raise StalledOut()
 
     def on_failure(self, shot_num: int, force_switch: bool = False, reason: Optional[str] = None) -> None:
         """Apply one step of the ladder for a shot that just failed.
@@ -568,18 +963,29 @@ class EscalationState:
                           "between each) -- stopping cleanly (still "
                           "logged in everywhere) rather than looping "
                           "further unattended.")
+                    if self.events:
+                        self.events.log("stalled_out", shot=shot_num,
+                                         rounds_exhausted=self.rounds_exhausted)
                     raise StalledOut()
                 print(f"\n  All {len(self.accounts)} account(s) failed this "
                       f"round -- backing off {ROUND_COOLDOWN_S // 60} min "
                       "in case this is a rate-limit/\"unusual activity\" "
                       f"flag, then retrying from {self.accounts[0].name}.")
+                if self.events:
+                    self.events.log("round_cooldown", shot=shot_num,
+                                     rounds_exhausted=self.rounds_exhausted,
+                                     wait_s=ROUND_COOLDOWN_S)
                 self.context.close()
                 time.sleep(ROUND_COOLDOWN_S)
                 self.accounts_tried_this_round = 0
                 self.account_fail_streak = 0
                 self.already_cooled_down_this_account = False
-                self.account_idx = 0
-                self.context, self.page = launch_session(self.p, self.account)
+                if not self._launch_first_working(0):
+                    print("\n  None of the configured accounts could even "
+                          "launch -- stopping cleanly.")
+                    if self.events:
+                        self.events.log("stalled_out", shot=shot_num, reason="no account could launch")
+                    raise StalledOut()
             else:
                 next_idx = (self.account_idx + 1) % len(self.accounts)
                 why = reason or (
@@ -590,9 +996,20 @@ class EscalationState:
                       f"this run (shot {shot_num} itself stays a gap -- a later "
                       f"pass over this same range picks it back up, since "
                       f"anything already downloaded gets skipped).")
+                if self.events:
+                    self.events.log("account_switch", shot=shot_num,
+                                     from_account=self.account.name,
+                                     to_account=self.accounts[next_idx].name,
+                                     reason=why)
                 self.account_fail_streak = 0
                 self.already_cooled_down_this_account = False
-                self._relaunch(next_idx)
+                self.context.close()
+                if not self._launch_first_working(next_idx):
+                    print("\n  None of the remaining accounts could even "
+                          "launch -- stopping cleanly.")
+                    if self.events:
+                        self.events.log("stalled_out", shot=shot_num, reason="no account could launch")
+                    raise StalledOut()
 
         elif self.account_fail_streak >= COOLDOWN_AFTER_CONSECUTIVE_FAILURES and not self.already_cooled_down_this_account:
             print(f"\n  {self.account_fail_streak} downloads in a row didn't "
@@ -603,6 +1020,9 @@ class EscalationState:
                   f"the next shot on it (shot {shot_num} itself stays a gap for "
                   f"now -- see this file's docstring for how gaps get "
                   f"swept up).")
+            if self.events:
+                self.events.log("account_cooldown", shot=shot_num,
+                                 account=self.account.name, wait_s=ACCOUNT_COOLDOWN_S)
             self.context.close()
             time.sleep(ACCOUNT_COOLDOWN_S)
             self.already_cooled_down_this_account = True
@@ -614,6 +1034,8 @@ class EscalationState:
                   f"account, '{self.account.name}') before "
                   f"moving on to the next shot (shot {shot_num} itself stays a "
                   f"gap for now).")
+            if self.events:
+                self.events.log("account_restart", shot=shot_num, account=self.account.name)
             self._relaunch()
             # don't reset account_fail_streak here: a restart that
             # doesn't actually help should still count toward the
@@ -643,6 +1065,10 @@ def main() -> None:
     group.add_argument("--range", help="Contiguous shot range, e.g. 1-20")
     group.add_argument("--shots", help="Comma-separated, possibly non-contiguous shot numbers, e.g. 5,9,14,201 (for redoing QC failures)")
     ap.add_argument("--force", action="store_true", help="Regenerate even if a file already exists (deletes the old one first) -- use with --shots to replace QC-failed images")
+    ap.add_argument("--out-dir", type=Path, help="Override the download destination directory "
+                     "(default: <video_dir>/generate/generated/images). Used by run_full_batch.py "
+                     "to generate each chunk into its own chunkN/ subfolder for per-chunk "
+                     "verification before promoting to the flat images/ directory.")
     args = ap.parse_args()
 
     if bool(args.project_url) == bool(args.accounts):
@@ -683,8 +1109,15 @@ def main() -> None:
     if missing:
         raise SystemExit(f"shot_list.md is missing shot numbers: {sorted(missing)}")
 
-    out_dir = args.video_dir / "generate" / "generated" / "images"
+    out_dir = args.out_dir if args.out_dir else args.video_dir / "generate" / "generated" / "images"
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Structured per-shot event log (JSONL, appended across runs) -- at the
+    # user's request (2026-09-10): a machine-analyzable record of exactly
+    # which prompt succeeded/failed on which account and when, separate
+    # from the prose printed above/to the redirected log file. See
+    # EventLog's docstring.
+    events = EventLog(args.video_dir / "generate" / "batch_events.jsonl")
 
     todo = []
     for n in wanted:
@@ -714,45 +1147,75 @@ def main() -> None:
     stalled_out = False
     launch_failed = None  # set to the exception if a session launch fails and can't be caught by the ladder
     failures = []
+    stopped_early = False  # set when the "3 failures in a row" circuit-breaker fires
     try:
         with sync_playwright() as p:
-            st = EscalationState(p, accounts)
+            st = EscalationState(p, accounts, events)
 
             try:
                 for i, (n, prompt, dest) in enumerate(todo):
-                    print(f"\n[{i+1}/{len(todo)}] Shot {n}: {prompt[:80]}{'...' if len(prompt) > 80 else ''} "
-                          f"[{st.account.name}]")
-                    try:
-                        generate_and_download(st.page, n, prompt, dest)
-                        print(f"  -> saved {dest.name}")
-                        st.on_success()
-                    except FlowBlockedError as e:
-                        # Flow itself blocked this account (quota exhausted,
-                        # an "unusual activity" flag, etc.) -- retrying or
-                        # restarting THIS account can't possibly help, so
-                        # skip straight to switching accounts instead of
-                        # wasting a restart+cooldown on it first.
-                        print(f"  !! BLOCKED: {e}")
-                        failures.append(n)
-                        if len(failures) >= 3 and len(failures) == i + 1:
-                            print("\n3 failures in a row right at the start -- something's "
-                                  "likely broken (selector mismatch, not logged in, wrong "
-                                  "project URL, or every account already blocked). "
-                                  "Stopping rather than burning your quota.")
+                    # Inner retry loop: a FlowBlockedError switches
+                    # EscalationState to a newly-available account (see
+                    # on_quota_blocked) -- retry THIS SAME shot immediately
+                    # on that account rather than only marking it a gap and
+                    # moving on. Fixed 2026-09-10 after a real run switched
+                    # accounts correctly but then just gave up on the shot
+                    # anyway, wasting the switch (the new account sat idle
+                    # until a whole separate future pass picked the gap back
+                    # up). Capped at one attempt per configured account so
+                    # a shot that's somehow unblockable everywhere still
+                    # gives up rather than looping forever.
+                    quota_attempts = 0
+                    while True:
+                        print(f"\n[{i+1}/{len(todo)}] Shot {n}: {prompt[:80]}{'...' if len(prompt) > 80 else ''} "
+                              f"[{st.account.name}]")
+                        events.log("attempt", shot=n, account=st.account.name, prompt=prompt[:200])
+                        try:
+                            generate_and_download(st.page, n, prompt, dest)
+                            print(f"  -> saved {dest.name}")
+                            events.log("success", shot=n, account=st.account.name, file=dest.name)
+                            st.on_success()
                             break
-                        st.on_failure(n, force_switch=True, reason=str(e))
-                    except (PWTimeoutError, TimeoutError, Exception) as e:
-                        print(f"  !! FAILED: {e}")
-                        failures.append(n)
+                        except FlowBlockedError as e:
+                            # Flow itself blocked this account (quota
+                            # exhausted, an "unusual activity" flag, etc.)
+                            # -- retrying or restarting THIS account can't
+                            # possibly help. Per-account cooldown + rotate-
+                            # to-next-available model (see
+                            # EscalationState.on_quota_blocked) -- an
+                            # EXPECTED, handled case now, not a sign the
+                            # run is broken, so it does NOT count toward
+                            # the "3 failures in a row" circuit breaker
+                            # below (that breaker is for genuinely
+                            # unexpected failures).
+                            print(f"  !! BLOCKED: {e}")
+                            events.log("blocked", shot=n, account=st.account.name, reason=str(e))
+                            st.on_quota_blocked(n, str(e))
+                            quota_attempts += 1
+                            if quota_attempts >= len(accounts):
+                                print(f"  Tried every configured account for shot {n}, still "
+                                      "blocked everywhere -- leaving it as a gap for now "
+                                      "(a later pass picks it back up).")
+                                failures.append(n)
+                                break
+                            continue  # retry this SAME shot on the account we just switched to
+                        except (PWTimeoutError, TimeoutError, Exception) as e:
+                            print(f"  !! FAILED: {e}")
+                            events.log("failed", shot=n, account=st.account.name, reason=str(e))
+                            failures.append(n)
 
-                        if len(failures) >= 3 and len(failures) == i + 1:
-                            print("\n3 failures in a row right at the start -- something's "
-                                  "likely broken (selector mismatch, not logged in, wrong "
-                                  "project URL). Stopping rather than burning your quota.")
+                            if len(failures) >= 3 and len(failures) == i + 1:
+                                print("\n3 failures in a row right at the start -- something's "
+                                      "likely broken (selector mismatch, not logged in, wrong "
+                                      "project URL). Stopping rather than burning your quota.")
+                                events.log("circuit_breaker_stop", shot=n, failures=list(failures))
+                                stopped_early = True
+                            else:
+                                st.on_failure(n)
                             break
 
-                        st.on_failure(n)
-
+                    if stopped_early:
+                        break
                     if i < len(todo) - 1:
                         delay = random.uniform(MIN_DELAY_S, MAX_DELAY_S)
                         print(f"  waiting {delay:.0f}s before next shot...")
@@ -779,6 +1242,8 @@ def main() -> None:
         if failures:
             print(f"Shots that did complete or fail before this: succeeded "
                   f"{len(todo) - len(failures)}, failed {failures}")
+        events.log("run_launch_failed", reason=str(launch_failed), failures=list(failures))
+        events.close()
         return
 
     if stalled_out:
@@ -792,13 +1257,27 @@ def main() -> None:
             "(quota exhausted on every account, a real captcha/challenge, "
             "UI changed, etc.)."
         )
+        events.log("run_stalled_out", failures=list(failures))
+        events.close()
         return
 
-    print(f"\nDone. {len(todo) - len(failures)}/{len(todo)} succeeded.")
+    attempted = len(failures) if stopped_early else len(todo)
+    succeeded = attempted - len(failures)
+    if stopped_early:
+        never_attempted = [n for n, _, _ in todo[attempted:]]
+        print(f"\nStopped early after {attempted}/{len(todo)} shots attempted "
+              f"({succeeded} succeeded, {len(failures)} failed) -- see the "
+              "circuit-breaker message above. "
+              f"{len(never_attempted)} shot(s) were never even attempted: {never_attempted}")
+    else:
+        print(f"\nDone. {succeeded}/{len(todo)} succeeded.")
     if failures:
         print(f"Failed shots (re-run the same --range to retry, already-done ones are skipped): {failures}")
     print("\nRun `python system/05_visuals/verify_batch.py audit "
           f"{args.video_dir}` to check the results.")
+    events.log("run_complete", succeeded=succeeded, total=len(todo),
+               stopped_early=stopped_early, failures=list(failures))
+    events.close()
 
 
 if __name__ == "__main__":

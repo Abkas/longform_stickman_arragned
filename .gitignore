@@ -18,6 +18,13 @@ client_secret*.json
 system/05_visuals/.flow_profile/
 system/05_visuals/.flow_profile_*/
 
+# per-account Flow project URLs (default= plus acc2=, acc3=, ... -- see
+# flow_record_session.py's --account flag for how each profile gets
+# created). Not secret like the profiles above, but project URLs are
+# account-identifying, and this stays local so it survives across
+# sessions instead of getting re-discovered from shell history each time.
+system/05_visuals/accounts.local.md
+
 # Python cruft
 __pycache__/
 *.pyc
@@ -45,9 +52,24 @@ videos/*.zip
 # and the concat-list file inside it holds machine-specific absolute paths
 videos/**/render_clips/
 
+# chunk-completion markers (run_full_batch.py's chunked verify/promote
+# pipeline) -- local pipeline state only, meaningless without the actual
+# chunk images (already excluded above as large binaries)
+videos/**/.verified
+
+# structured per-shot event log (flow_batch_driver.py's EventLog) -- same
+# kind of local debugging record as system/05_visuals/logs/ above, grows
+# unbounded, not source
+videos/**/batch_events.jsonl
+
 # flow_batch_driver.py's failure-diagnosis screenshots — grows unbounded
 # on every run, purely for local debugging, never posted to GitHub
 system/05_visuals/.flow_debug/
 
 # full terminal-output logs of driver runs — local debugging record only
 system/05_visuals/logs/
+
+# per-account quota-cooldown state, persisted so it survives across the
+# short-lived processes the systemd timer spawns — local runtime state,
+# not something to commit
+system/05_visuals/.flow_quota_cooldowns.json
