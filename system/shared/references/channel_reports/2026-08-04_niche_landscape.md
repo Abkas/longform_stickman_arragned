@@ -41,6 +41,32 @@ Reference images saved to `system/shared/references/images/` (filenames match th
 | The Infographics Show | Large, established faceless explainer channel — history, science, military, survival, crime, comparisons | Much bigger production tier, flat "infographic" animation style rather than ink/stickman — useful as a scale reference for what a mature faceless channel looks like, not a style match |
 | TED-Ed, Weird History, TEDx Talks, National Geographic, Professor Dave Explains | Surfaced by recommendation-engine "similar channels" tools as algorithmically close to the benchmark | All established, high-production-value brands — not real style/scale peers for a new channel, skip as direct competitive reference |
 
+## Update 2026-09-13 — new Deep Epoch upload spotted: "How Did Humans Invent Kings?"
+
+User flagged this video directly: https://www.youtube.com/watch?v=k2CXi4XPi7U — same channel
+(`@DeepEpoch-c3c`) already documented above as a confirmed Ink Explainer clone, this time on a
+new topic (not the rain angle). **Could not retrieve the actual transcript/script text** with
+tools available in this environment — YouTube's page is fully JS-rendered (WebFetch only returns
+footer nav), and the locally installed `yt-dlp` (2024.10.22) is too old to get past YouTube's
+current signature/nsig scheme, with no way to install a newer version in this sandbox (no route to
+PyPI package files, same limitation hit elsewhere this project). Do not treat anything below as a
+verified quote — it's inferred from search-result snippets only, flagged as such.
+
+**What's confirmed real**: the topic is the origin of kingship/political hierarchy — humans went
+from small, permanently-non-hierarchical communities to accepting kings, with the hook apparently
+built around the real anthropological finding that egalitarian hunter-gatherer bands actively used
+social pressure (gossip, ridicule, ostracism) to prevent anyone from accumulating outsized power
+(this tracks with real, legitimate research — Christopher Boehm's "reverse dominance hierarchy"
+work on hunter-gatherer egalitarianism — so if the script actually cites something like that, it's
+a legitimate angle, not junk science, consistent with the "research-backed" format being copied).
+
+**Consequence for us**: treat "origin of kingship / political hierarchy" as a **now-taken angle**,
+the same way the rain angle is already flagged above — don't pick this exact topic for a future
+video without a genuinely different evidence set or framing. If closer, verbatim script analysis is
+needed later, the practical path is the user pasting the transcript/captions directly (YouTube's
+own "Show transcript" panel, under the video description) rather than more automated-fetch attempts
+against this specific environment's tooling limits.
+
 ## Data limitations — read before trusting any number above
 
 - **No verified subscriber/view counts.** YouTube channel pages are fully JavaScript-rendered, so automated fetching only returns the page footer — actual stats never loaded. SocialBlade blocked automated requests outright (403).

@@ -239,6 +239,14 @@ MAX_ACCOUNT_QUOTA_COOLDOWN_S = 24 * 3600  # cap -- matches the documented daily-
 # without waiting for the next external re-invocation.
 MAX_INPROCESS_COOLDOWN_WAIT_S = 20 * 60  # 20 min
 
+# Module-level so every launch_session() call (initial launch, stall-recovery
+# restart, account-switch -- 5 call sites) picks up the same value without
+# threading a parameter through all of them. Set once from --aspect-ratio at
+# the top of main(), before any session gets launched. Default ":9" matches
+# a "16:9" radio button label (landscape, long-form video) -- the pre-existing
+# behavior this project has always used. Pass "9:16" for vertical/Shorts.
+ASPECT_RATIO_LABEL = ":9"
+
 
 def setup_session(page) -> None:
     """One-time per-session settings: image mode, aspect ratio, model,
@@ -246,10 +254,12 @@ def setup_session(page) -> None:
     differs from what was recorded -- these are typed exactly as recorded."""
     page.get_by_label("Settings trigger").click()
     page.get_by_role("radio", name="Image").click()
-    # NOTE: recorded as a partial match ":9" -- confirm this is the aspect
-    # ratio you actually want (16:9 for landscape long-form) before a real
-    # run; adjust the `name=` string if the recorder just truncated it.
-    page.get_by_role("radio", name=":9").click()
+    # Partial-text match against the radio button's label -- ASPECT_RATIO_LABEL
+    # defaults to ":9" (matches "16:9", landscape); pass --aspect-ratio "9:16"
+    # at the CLI for vertical/Shorts. If Flow's actual radio labels differ
+    # from these guesses, adjust the strings passed to --aspect-ratio, not
+    # this line.
+    page.get_by_role("radio", name=ASPECT_RATIO_LABEL).click()
     page.get_by_label("Select model family").click()
     page.get_by_role("menuitem", name="🍌 Nano Banana Pro").click()
     page.get_by_role("radio", name="x1").click()
@@ -753,7 +763,49 @@ class EscalationState:
         self.quota_blocked_until: dict[str, float] = {}   # account name -> time.time() it's usable again
         self.quota_blocked_streak: dict[str, int] = {}    # account name -> consecutive quota-blocks (for adaptive backoff)
         self._load_quota_state()
-        self.context, self.page = launch_session(p, self.account)
+        # Cooldown-aware from the very first launch -- fixed 2026-09-11
+        # after a real gap: this used to always launch accounts[0]
+        # unconditionally, ignoring the cooldown state just loaded above,
+        # so every 15-min tick wasted a real browser launch + shot attempt
+        # on whichever account happened to be listed first even when it
+        # was already known (from disk) to still be hours from clearing.
+        # _launch_first_available skips anything still cooling down;
+        # _launch_first_working is the fallback for the (rare) case where
+        # every account is either cooling down or fails to LAUNCH, so
+        # there's still at least an attempt to report a real error from
+        # instead of silently doing nothing.
+        if not self._launch_first_available(0):
+            # Not available right now doesn't necessarily mean broken --
+            # most likely every account is still legitimately cooling
+            # down (known from disk). Mirror on_quota_blocked's own
+            # "wait briefly, or exit cleanly for a longer wait" logic
+            # rather than either hanging for hours or blindly launching a
+            # known-blocked account anyway (which _launch_first_working
+            # would do, defeating the whole point of checking first).
+            now = time.time()
+            waits = {a.name: self.quota_blocked_until.get(a.name, now) for a in self.accounts}
+            soonest_name = min(waits, key=waits.get)
+            wait_s = max(0, waits[soonest_name] - now)
+            if wait_s <= MAX_INPROCESS_COOLDOWN_WAIT_S:
+                print(f"\n  Every account is cooling down right now. Waiting "
+                      f"{wait_s / 60:.0f} min for '{soonest_name}' to clear before even starting.")
+                time.sleep(wait_s)
+                if not self._launch_first_available(0):
+                    # Cooldown timestamp passed but it STILL couldn't
+                    # launch (a real launch failure, not just quota) --
+                    # now it's worth trying every account for real.
+                    if not self._launch_first_working(0):
+                        raise RuntimeError(
+                            "No configured account could be launched -- see prior messages.")
+            else:
+                print(f"\n  Every account is cooling down right now. Soonest is "
+                      f"'{soonest_name}' in {wait_s / 60:.0f} min -- longer than this process "
+                      f"will wait before even starting ({MAX_INPROCESS_COOLDOWN_WAIT_S // 60} min cap). "
+                      "Exiting cleanly; the next scheduled tick picks this back up.")
+                if self.events:
+                    self.events.log("all_accounts_cooldown_exit_at_start",
+                                     wait_minutes=round(wait_s / 60, 1), next_account=soonest_name)
+                raise StalledOut()
 
     @property
     def account(self) -> Account:
@@ -837,10 +889,14 @@ class EscalationState:
 
     def _launch_first_available(self, start_idx: int) -> bool:
         """Like _launch_first_working, but ALSO skips any account still
-        under its own quota_blocked_until cooldown -- used exclusively by
-        on_quota_blocked's per-account rotation model. Sets
-        self.account_idx/context/page on success; returns False only if
-        every account is either still cooling down or fails to launch."""
+        under its own quota_blocked_until cooldown -- used both by
+        on_quota_blocked's per-account rotation AND by __init__'s very
+        first launch (so a fresh process consults the persisted cooldown
+        state before ever touching an account, instead of always trying
+        accounts[0] blind regardless of what's already known about it).
+        Sets self.account_idx/context/page on success; returns False only
+        if every account is either still cooling down or fails to
+        launch."""
         n = len(self.accounts)
         now = time.time()  # wall-clock, not monotonic -- quota_blocked_until is persisted across process restarts
         for offset in range(n):
@@ -1069,11 +1125,19 @@ def main() -> None:
                      "(default: <video_dir>/generate/generated/images). Used by run_full_batch.py "
                      "to generate each chunk into its own chunkN/ subfolder for per-chunk "
                      "verification before promoting to the flat images/ directory.")
+    ap.add_argument("--aspect-ratio", default=":9", help="Partial-text match against Flow's "
+                     "aspect-ratio radio button label, set once per session in setup_session(). "
+                     "Default ':9' matches a '16:9' label (landscape, this project's long-form "
+                     "default). Pass '9:16' for vertical/Shorts. If Flow's actual radio labels "
+                     "differ from these guesses, adjust this string, not the driver code.")
     args = ap.parse_args()
 
     if bool(args.project_url) == bool(args.accounts):
         raise SystemExit("Pass exactly one of --project-url (single account) "
                           "or --accounts (multi-account rotation).")
+
+    global ASPECT_RATIO_LABEL
+    ASPECT_RATIO_LABEL = args.aspect_ratio
 
     if args.accounts:
         accounts = []
@@ -1150,9 +1214,14 @@ def main() -> None:
     stopped_early = False  # set when the "3 failures in a row" circuit-breaker fires
     try:
         with sync_playwright() as p:
-            st = EscalationState(p, accounts, events)
-
             try:
+                # Construction can itself raise StalledOut now (all
+                # accounts cooling down past the in-process wait cap at
+                # startup -- see EscalationState.__init__) -- inside this
+                # try so that gets the correct clean "stalled_out" message
+                # below instead of being misreported as a launch failure
+                # by the outer except.
+                st = EscalationState(p, accounts, events)
                 for i, (n, prompt, dest) in enumerate(todo):
                     # Inner retry loop: a FlowBlockedError switches
                     # EscalationState to a newly-available account (see

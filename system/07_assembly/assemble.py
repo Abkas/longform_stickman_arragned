@@ -21,11 +21,15 @@ different shot ranges (e.g. an early batch plus a later re-render) without
 hardcoding any video-specific folder name into this shared script:
     --override 88:videos/NNN-slug/generate/some_other_folder
 
-No per-shot audio timestamps are assumed to exist. Each shot's documented
-`- Duration:` in shot_list.md is scaled uniformly so the shots sum to the
-real audio length -- see assembly.md's "Known limitation" section for why
-this is an approximation, not a word-perfect sync, and what would fix that
-properly (real ElevenLabs word timestamps, not implemented yet).
+Real per-shot timing (2026-09-12): if a `narration_timestamps.json` sits
+next to the audio file (system/06_voice/voice_generate.py's output --
+word-level timestamps from ElevenLabs' own alignment), each shot's actual
+start/end time is computed by matching its `- Narration:` field against
+that real word timeline, instead of the old fallback below. This is what
+assembly.md's "Known limitation" section asked for -- word-perfect sync,
+not a proportional guess. Falls back to the old approximation (each
+shot's documented `- Duration:` scaled uniformly so the shots sum to the
+real audio length) only when no timestamps file exists.
 
 Every still gets a slow Ken Burns pan/zoom (alternating zoom-in/zoom-out,
 cycling pan direction, with per-shot randomized intensity so it doesn't
@@ -42,12 +46,18 @@ finished sound-design pipeline -- turn either off if it doesn't help.
 """
 import argparse
 import array
+import json
 import math
 import random
 import re
 import subprocess
 import wave
 from pathlib import Path
+
+TAG_WORD_RE = re.compile(r"^\[[a-z ]+\]$")  # a whole "word" token that IS just a tag, e.g. in the
+                                             # real word-alignment list, where each tag got its own entry
+TAG_ANYWHERE_RE = re.compile(r"\[[a-z ]+\]")  # a tag occurring anywhere inside a longer string, e.g.
+                                               # shot_list.md's `"[flatly] A hungry ape..."` narration text
 
 W, H, FPS = 1920, 1080, 30
 ZMAX_BASE = 1.12  # ~12% max zoom, standard Ken Burns range, before per-shot jitter
@@ -73,11 +83,69 @@ def parse_shots(shot_list_path: Path):
         dm = re.search(r"^- Duration:\s*~?(\d+(?:\.\d+)?)s", block, re.MULTILINE)
         if not dm:
             raise SystemExit(f"Shot {h.group(1)}: no Duration field")
-        shots.append({"num": int(h.group(1)), "doc_duration": float(dm.group(1))})
+        nm = re.search(r'^- Narration:\s*"(.*)"\s*$', block, re.MULTILINE)
+        shots.append({
+            "num": int(h.group(1)),
+            "doc_duration": float(dm.group(1)),
+            "narration": nm.group(1) if nm else None,
+        })
     shots.sort(key=lambda s: s["num"])
     nums = [s["num"] for s in shots]
     assert nums == list(range(1, len(shots) + 1)), "shot numbers not contiguous starting at 1"
     return shots
+
+
+def find_timestamps(audio_path: Path) -> Path | None:
+    p = audio_path.parent / "narration_timestamps.json"
+    return p if p.is_file() else None
+
+
+def build_real_shot_timing(shots: list[dict], timestamps_path: Path, audio_duration: float) -> bool:
+    """Assigns each shot a real start/end time by matching its quoted
+    `- Narration:` field against ElevenLabs' actual word-level alignment
+    (system/06_voice/voice_generate.py's output), instead of guessing from
+    a documented word-count estimate. Returns True and mutates `shots` in
+    place (adds "real_duration"/"cut_time" like the old scaling path did)
+    on success; returns False (leaving `shots` untouched) if anything about
+    the two sources doesn't line up -- caller falls back to the old
+    proportional-scaling approach rather than silently mis-syncing.
+
+    How the match works: shot_list.md's own header claims every shot's
+    Narration field concatenates, in order, to reconstruct the exact text
+    that was sent to ElevenLabs (word-for-word, no gaps/overlaps) -- so a
+    shot's Nth narration word IS the same word as the real timeline's
+    running Nth word, as long as both sides are tokenized the same way
+    (split on whitespace, tags stripped) and counted up in lockstep."""
+    data = json.loads(timestamps_path.read_text())
+    real_words = [w for w in data["words"] if not TAG_WORD_RE.match(w["text"])]
+
+    if any(s["narration"] is None for s in shots):
+        print("  (some shots have no parseable Narration field -- falling back to scaling)")
+        return False
+
+    shot_word_lists = [[w for w in re.split(r"\s+", TAG_ANYWHERE_RE.sub("", s["narration"]).strip()) if w]
+                        for s in shots]
+    total_shot_words = sum(len(ws) for ws in shot_word_lists)
+    if total_shot_words != len(real_words):
+        print(f"  Word count mismatch: shot_list.md's Narration fields total {total_shot_words} "
+              f"words, but the real timeline has {len(real_words)} -- falling back to scaling. "
+              "(A shot_list.md hand-edit after voice generation, or a script/generate_voice.md "
+              "drift, would cause this.)")
+        return False
+
+    idx = 0
+    for s, words in zip(shots, shot_word_lists):
+        s["_word_start_idx"] = idx
+        idx += len(words)
+
+    for i, s in enumerate(shots):
+        start_idx = s["_word_start_idx"]
+        s["cut_time"] = real_words[start_idx]["start"]
+        next_start = (real_words[shots[i + 1]["_word_start_idx"]]["start"]
+                      if i + 1 < len(shots) else audio_duration)
+        s["real_duration"] = max(0.1, next_start - s["cut_time"])
+        del s["_word_start_idx"]
+    return True
 
 
 def find_image(shot_num: int, images_dir: Path, overrides: list[tuple[int, Path]]) -> Path:
@@ -92,6 +160,9 @@ def find_image(shot_num: int, images_dir: Path, overrides: list[tuple[int, Path]
     return matches[0]
 
 
+AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
+
+
 def find_audio(video_dir: Path, explicit: Path | None) -> Path:
     if explicit:
         return explicit
@@ -99,7 +170,7 @@ def find_audio(video_dir: Path, explicit: Path | None) -> Path:
     for sub in ("audio", "generate/generated/voice", "generate/voice"):
         d = video_dir / sub
         if d.is_dir():
-            candidates += [p for p in d.iterdir() if p.is_file()]
+            candidates += [p for p in d.iterdir() if p.is_file() and p.suffix.lower() in AUDIO_EXTS]
     if len(candidates) == 1:
         return candidates[0]
     raise SystemExit(
@@ -211,9 +282,19 @@ def main() -> None:
                      help="FROM_SHOT:PATH -- use PATH as the image source from shot FROM_SHOT onward")
     ap.add_argument("--no-sfx", dest="sfx", action="store_false", default=True,
                      help="Disable the synthesized tick at each shot transition (default: on)")
+    ap.add_argument("--vertical", action="store_true",
+                     help="9:16 output (1080x1920) for Shorts, instead of the default 16:9 "
+                     "landscape (1920x1080) long-form videos use. build_zoompan_filter()'s "
+                     "pre-crop upscale (scale=3840:-2) works unchanged either way -- it always "
+                     "scales to a fixed working width regardless of source image orientation, "
+                     "so only the final W/H (the zoompan crop window) needs to change here.")
     ap.add_argument("--no-music", dest="music", action="store_false", default=True,
                      help="Disable the synthesized ambient pad under the narration (default: on)")
     args = ap.parse_args()
+
+    if args.vertical:
+        global W, H
+        W, H = 1080, 1920
 
     video_dir = args.video_dir
     shot_list_path = video_dir / "shot_list.md"
@@ -238,16 +319,28 @@ def main() -> None:
 
     shots = parse_shots(shot_list_path)
     audio_duration = ffprobe_duration(audio_path)
-    doc_total = sum(s["doc_duration"] for s in shots)
-    scale = audio_duration / doc_total
-    print(f"Audio: {audio_path} ({audio_duration:.2f}s) | documented shot-duration sum: "
-          f"{doc_total:.2f}s | scale factor: {scale:.4f}")
+    print(f"Audio: {audio_path} ({audio_duration:.2f}s)")
 
-    cumulative = 0.0
+    timestamps_path = find_timestamps(audio_path)
+    used_real_timing = False
+    if timestamps_path:
+        print(f"Found {timestamps_path} -- attempting real word-level sync...")
+        used_real_timing = build_real_shot_timing(shots, timestamps_path, audio_duration)
+        if used_real_timing:
+            print("  Real per-shot timing applied (word-perfect sync, not an approximation).")
+
+    if not used_real_timing:
+        doc_total = sum(s["doc_duration"] for s in shots)
+        scale = audio_duration / doc_total
+        print(f"Using proportional-scaling fallback | documented shot-duration sum: "
+              f"{doc_total:.2f}s | scale factor: {scale:.4f}")
+        cumulative = 0.0
+        for s in shots:
+            s["real_duration"] = s["doc_duration"] * scale
+            s["cut_time"] = cumulative
+            cumulative += s["real_duration"]
+
     for s in shots:
-        s["real_duration"] = s["doc_duration"] * scale
-        s["cut_time"] = cumulative
-        cumulative += s["real_duration"]
         s["image"] = find_image(s["num"], images_dir, overrides)
 
     print("\nRendering per-shot Ken Burns clips...")

@@ -38,29 +38,30 @@ python system/07_assembly/assemble.py videos/002-built-to-starve \
     --override 88:videos/002-built-to-starve/generate/image_v2/asdf
 ```
 
-## Known limitation: duration sync is an approximation, not a real one
+## Duration sync: real word-level timing (fixed 2026-09-12), falls back to an approximation
 
-There's no per-shot or per-word timestamp data for the narration — just one
-combined audio file. Scaling `shot_list.md`'s documented durations
-proportionally to match the real audio length (step 3 above) preserves each
-shot's *relative* pacing but does not guarantee any given shot's on-screen
-time actually lines up with when that line is spoken. Video 002 surfaced
-why this matters: its shot list assumed 207 WPM: the real ElevenLabs output
-measured 166 WPM, a 24.6% overrun, which is also most of why that video felt
-slow/draggy before this was diagnosed.
+**Fixed as of video 003**: `system/06_voice/voice_generate.py` (new
+2026-09-12) automates narration via ElevenLabs' timestamped TTS API,
+producing `narration_timestamps.json` next to `narration.mp3` — real
+word-level timing, the same pattern the sister project
+`movie_auto_narration_fb` already used. When that file exists,
+`assemble.py` matches each shot's quoted `- Narration:` field (from
+`shot_list.md`) against the real timeline word-for-word and gives every
+shot its actual spoken start/end time — not an approximation. Video 003's
+first real run: shot durations summed to within 0.07s of the true 1057.6s
+audio length. See `assemble.py`'s `build_real_shot_timing()`.
 
-**The real fix, not yet built**: ElevenLabs' API can return word-level
-timestamps alongside the audio (see the sister project `movie_auto_narration_fb`'s
-`05_voice`/`narration_timestamps.json` for a working example of this exact
-pattern — word + beat-level timestamps produced by the voice stage,
-consumed by editing to retime shots to real narration timing instead of an
-assumed pace). This project's voice stage is still fully manual (copy
-narration text into ElevenLabs' web app by hand), which is exactly why no
-timestamp data exists to use. Automating `06_voice` via the API (instead of
-the web app) would produce that data essentially for free and let
-`assemble.py` retime shots against real speech boundaries instead of a
-scaled guess — worth doing before the next video if pacing accuracy matters
-more than staying on the free/manual ElevenLabs path.
+**The old approximation still exists as a fallback** (no `narration_timestamps.json`
+found next to the audio, e.g. video 001/002's manual-ElevenLabs-web-app
+narration, or a word-count mismatch between `shot_list.md` and the
+timestamps file): `shot_list.md`'s documented per-shot durations are
+scaled proportionally to match the real audio length, preserving each
+shot's *relative* pacing but not guaranteeing any shot's on-screen time
+actually lines up with when that line is spoken. Video 002 is why this
+matters: its shot list assumed 207 WPM, the real ElevenLabs output
+measured 166 WPM (24.6% overrun) — most of why that video felt
+slow/draggy before this was diagnosed. Re-running `voice_generate.py` for
+videos 001/002 would unlock real sync for them too.
 
 ## Known limitation: motion ratio
 
